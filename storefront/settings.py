@@ -27,16 +27,14 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
-# Application definition
-
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    'django.contrib.admin',        #! admin interface
+    'django.contrib.auth',         #! authenticating users 
+    'django.contrib.contenttypes', #! content type system
+    'django.contrib.sessions',     #! session management
+    'django.contrib.messages',     #! displaying messages/notifications
+    'django.contrib.staticfiles',  #! for static files
+    'playground',
 ]
 
 MIDDLEWARE = [
@@ -100,7 +98,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
+# https://docs.djangoproject.com/en/5.2/topics/i 18n/
 
 LANGUAGE_CODE = 'en-us'
 
