@@ -35,6 +35,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',     #! displaying messages/notifications
     'django.contrib.staticfiles',  #! for static files
     'playground',
+    'products',
+    'cart',
+    'orders',
 ]
 
 MIDDLEWARE = [
