@@ -11,15 +11,22 @@ body {
   font-family: "Saira", sans-serif;
 }
 .intro{
-  background-image: url('img/headerimg.jpg'); /* path to your image */
-  background-size: cover;      /* make image cover the whole screen */
-  background-repeat: no-repeat; /* prevent tiling */
-  background-position: center;  /* center the image */
-  height: 100%;
-  margin-top: 0px;
+    background-image: url('https://images.unsplash.com/photo-1483985988355-763728e1935b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    height: 100%;
+    margin-top: 0px;
+    padding: 20px 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 .container {
     padding: 5px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
 }
 nav{
     display: flex;
@@ -31,6 +38,17 @@ nav{
     margin-top: 10px;
     width: 100px;
     height: 90px;
+    background: #510f39;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+nav ul {
+    display: flex;
+    list-style: none;
 }
 nav ul li{
     display: inline-block;
@@ -42,6 +60,7 @@ nav ul li a{
     color: #510f39;
     font-size: 18px;
     position: relative;
+    font-weight: 500;
 }
 nav ul li a::after{
     content: '';
@@ -63,14 +82,20 @@ nav ul li a:hover::after{
     justify-content: center;
     align-items: center;
     text-align: center;
+    flex-grow: 1;
+    justify-content: center;
 }
 .header-text h1{
     font-family: "Saira", sans-serif;
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
 } 
 .header-text h5{
     font-family: "Playwrite AU NSW", cursive;
+    font-size: 1.5rem;
+    font-weight: 400;
 }
-.header-search-engin{
+.header-search-engine{
     margin-top: 15px;
     display: flex;
     flex-direction: column;
@@ -79,20 +104,20 @@ nav ul li a:hover::after{
     text-align: center;
     padding-bottom: 10rem;
 }
-.header-search-engin input{
+.header-search-engine input{
     width: 300px;
-    height: 30px;
+    height: 45px;
     padding: 10px 15px;
-    border-radius: 15px;
-    outline: none;                   /* Removes default focus outline */
+    border-radius: 25px;
+    outline: none;
     font-size: 16px;
     border: 2px solid hotpink; 
-    background-color: transparent;
-    color: white;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #510f39;
 }
-.header-search-engin input:focus{
-    border-color: deeppink;          /* Optional: change border color on focus */
-    box-shadow: 0 0 5px hotpink; 
+.header-search-engine input:focus{
+    border-color: deeppink;
+    box-shadow: 0 0 8px hotpink; 
 }
 /* featured products */
 .featured-product{
@@ -112,12 +137,17 @@ nav ul li a:hover::after{
 .card {
     border-radius: 10px;
     position: relative;
-    /* padding: 10px; */
     text-align: left;
-    /* box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px; */
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-5px);
 }
 .card img{
     width: 100%;
+    height: 200px;
     border-radius: 10px;
     display: block;
     position: relative;
@@ -125,20 +155,28 @@ nav ul li a:hover::after{
 }
 .discount-badge{
     position: absolute;
-    top: 5px;
-    left: 5px;
+    top: 10px;
+    left: 10px;
     background-color: rgb(44, 44, 44);
     color: white;
     border-radius: 4px;
-    padding: 3px;
-    font-size: 11px;
+    padding: 5px 10px;
+    font-size: 12px;
+    z-index: 2;
 }
 .card h6 {
-  margin: 10px 0 2px 0;
-  padding: 0 4px;
-  font-size: 11px;
+    margin: 10px 0 2px 0;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 600;
 }
 .pricing{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 10px;
+}
+.price-container {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -146,89 +184,80 @@ nav ul li a:hover::after{
 .pricing .original{
     text-decoration: line-through;
     color: gray;
-    padding: 0 4px;
+    font-size: 14px;
 }
 .pricing .discount{
     color: red;
     font-weight: bold;
-    padding: 0 4px;
+    font-size: 16px;
 }
 .pricing a i {
-  margin-left: auto; /* push icon to the right */
-  color: hotpink;
-  font-size: 18px;
-  cursor: pointer;
-  text-decoration: none;
-  color: #510f39;
-  margin-left: 12rem;
+    color: hotpink;
+    font-size: 20px;
+    cursor: pointer;
+    text-decoration: none;
 }
 .categories {
-  text-align: center;
-  margin: 40px 0;
+    text-align: center;
+    margin: 40px 0;
 }
-
 .categories h2 {
-  font-size: 24px;
-  font-weight: bold;
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
 }
-
 .categories p {
-  max-width: 600px;
-  margin: 10px auto 30px;
-  color: #666;
-  font-size: 14px;
+    max-width: 600px;
+    margin: 10px auto 30px;
+    color: #666;
+    font-size: 16px;
 }
-
 .category-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: 200px 200px;
-  gap: 20px;
-  justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 200px 200px;
+    gap: 20px;
+    justify-content: center;
 }
-
 .type {
-  position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  color: white;
-  font-weight: 500;
-  height: 200px;
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    color: white;
+    font-weight: 500;
+    height: 200px;
 }
-
 .type img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
 }
-
 .type::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.3); /* dark overlay */
-  z-index: 2;
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 2;
 }
-
 .type h4 {
-  position: relative;
-  z-index: 3;
-  padding: 10px;
+    position: relative;
+    z-index: 3;
+    padding: 15px;
+    font-size: 1.2rem;
 }
-
 .type.tall {
-  grid-row: span 2;
-  height: 420px;
+    grid-row: span 2;
+    height: 420px;
 }
 .section-header{
     display: flex;
@@ -237,7 +266,7 @@ nav ul li a:hover::after{
     margin-bottom: 30px;
 }
 .view-all-btn{
-    background-color: black;
+    background-color: #510f39;
     color: white;
     padding: 12px 24px;
     border-radius: 25px;
@@ -247,35 +276,40 @@ nav ul li a:hover::after{
     display: flex;
     align-items: center;
     gap: 8px;
+    transition: background-color 0.3s;
 }
 .view-all-btn:hover {
-    background-color: #555; /* Slightly lighter on hover */
+    background-color: #7a1758;
 }
 .ask-question-btn{
-    background-color: black;
+    background-color: #510f39;
     color: white;
     padding: 12px 24px;
     border-radius: 25px;
     text-decoration: none;
     font-size: 14px;
+    transition: background-color 0.3s;
 }
 .ask-question-btn:hover {
-    background-color: #555; /* Slightly lighter on hover */
+    background-color: #7a1758;
 }
 .question-boxs{
     margin-top: 30px;
 }
 .main-box{
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+    justify-content: center;
 }
 .left-side h3{
     margin-bottom: 30px;
+    font-size: 1.8rem;
 }
 .left-side p{
     margin-bottom: 30px;
+    color: #666;
+    line-height: 1.6;
 }
 .faq-wrapper{
     display: flex;
@@ -306,10 +340,14 @@ nav ul li a:hover::after{
     margin: 0;
     font-size: 16px;
     font-weight: 500;
+    padding-right: 20px;
 }
 .faq-question i{
     color: #666;
-    transition: transform 0.3s ease;;
+    transition: transform 0.3s ease;
+}
+.faq-question.active i {
+    transform: rotate(180deg);
 }
 .answer-content{
     overflow: hidden;
@@ -330,6 +368,140 @@ nav ul li a:hover::after{
     background-color: #510f39;
     color: white;
     text-align: center;
-    padding: 20px 0;
+    padding: 30px 0;
     margin-top: 40px;
+}
+
+/* Mobile Navigation */
+.mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #510f39;
+    cursor: pointer;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 1200px) {
+    .wrapper {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .wrapper {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .category-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .type.tall {
+        grid-row: span 1;
+        height: 200px;
+    }
+    
+    .header-text h1 {
+        font-size: 2.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+    
+    nav ul {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    nav ul.show {
+        display: flex;
+    }
+    
+    nav ul li {
+        margin: 10px 0;
+    }
+    
+    .main-box {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    
+    .header-text h1 {
+        font-size: 2.2rem;
+    }
+    
+    .header-text h5 {
+        font-size: 1.2rem;
+    }
+    
+    .header-search-engine input {
+        width: 250px;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 20px;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 576px) {
+    .wrapper {
+        grid-template-columns: 1fr;
+    }
+    
+    .category-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-text h1 {
+        font-size: 1.8rem;
+    }
+    
+    .header-search-engine {
+        padding-bottom: 5rem;
+    }
+    
+    .featured-product, .popular-products {
+        padding: 30px 0;
+    }
+    
+    .categories h2 {
+        font-size: 1.6rem;
+    }
+    
+    .card h6 {
+        font-size: 13px;
+    }
+    
+    .view-all-btn, .ask-question-btn {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 400px) {
+    .container {
+        padding: 5px 15px;
+    }
+    
+    .header-text h1 {
+        font-size: 1.6rem;
+    }
+    
+    .header-search-engine input {
+        width: 220px;
+        font-size: 14px;
+    }
+    
+    .categories h2 {
+        font-size: 1.4rem;
+    }
 }
