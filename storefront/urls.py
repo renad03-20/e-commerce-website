@@ -16,10 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
     #! any url that start with(playground/)should be handled in the playground app 
     path("", include("pages.urls")), #? this is^^^^what this line mean and so we have to do this any time we create a new app
 ]
