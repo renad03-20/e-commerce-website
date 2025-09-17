@@ -1,8 +1,40 @@
-{% extends 'base.html' %}
 {% block content %}
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Sign Up</button>
-</form>
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/signup.css' %}">
+{% endblock %}
+
+<div class="container">
+    <div class="therightside">
+        <img src="{% static 'img/flowers.jpg' %}" alt="a photo of flowers">
+    </div>
+
+    <div class="theleftside">
+       <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+            </div>
+
+            <!-- <div class="form-group">
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+            </div> -->
+
+            <div class="form-group">
+                <label for="{{ form.password1.id_for_label }}">Password</label>
+                {{ form.password1 }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+                {{ form.password2 }}
+            </div>
+
+            <button type="submit">Sign Up</button>
+        </form>
+        <a href="{% url 'login' %}">Already have an account? Login</a>
+    </div>
+</div>
 {% endblock %}
