@@ -9,23 +9,39 @@
     </div>
     
     <div class="theleftside">
+        <!-- Display messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- Display form errors -->
+        {% if form.errors %}
+            <div class="alert alert-error">
+                Your username and password didn't match. Please try again.
+            </div>
+        {% endif %}
+        
         <form method="post">
-    {% csrf_token %}
+            {% csrf_token %}
 
-    <div class="form-group">
-        <label for="{{ form.username.id_for_label }}">Username</label>
-        {{ form.username }}
-    </div>
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+            </div>
 
-    <div class="form-group">
-        <label for="{{ form.password.id_for_label }}">Password</label>
-        {{ form.password }}
-    </div>
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+            </div>
 
-    <button type="submit">Login</button>
-</form>
+            <button type="submit">Login</button>
+        </form>
 
-<a href="{% url 'signup' %}">Don't have an account? Sign up</a>
+        <a href="{% url 'signup' %}">Don't have an account? Sign up</a>
     </div>
 </div>
 {% endblock %}
