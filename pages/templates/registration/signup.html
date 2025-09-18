@@ -1,5 +1,7 @@
-{% block content %}
+{% extends 'base.html' %}
 {% load static %}
+
+{% block content %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/signup.css' %}">
 {% endblock %}
@@ -10,7 +12,6 @@
     </div>
 
     <div class="theleftside">
-        <!-- Display messages -->
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }}">
@@ -19,15 +20,14 @@
             {% endfor %}
         {% endif %}
         
+        {% if form.errors %}
+            <div class="alert alert-error">
+                Please correct the errors below.
+            </div>
+        {% endif %}
+        
        <form method="post">
             {% csrf_token %}
-            
-            <!-- Display form errors -->
-            {% if form.errors %}
-                <div class="alert alert-error">
-                    Please correct the errors below.
-                </div>
-            {% endif %}
             
             <div class="form-group">
                 <label for="{{ form.username.id_for_label }}">Username</label>
@@ -59,6 +59,14 @@
                 {{ form.password2 }}
                 {% if form.password2.errors %}
                     <div class="error">{{ form.password2.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group checkbox-group">
+                {{ form.is_artist }}
+                <label for="{{ form.is_artist.id_for_label }}">I am an artist and want to sell my artwork</label>
+                {% if form.is_artist.errors %}
+                    <div class="error">{{ form.is_artist.errors }}</div>
                 {% endif %}
             </div>
 
