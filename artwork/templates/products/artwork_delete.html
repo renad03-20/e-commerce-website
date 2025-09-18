@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="delete-confirmation">
+    <h1>Delete Artwork</h1>
+    
+    <p>Are you sure you want to delete "{{ artwork.title }}"?</p>
+    
+    <div class="artwork-preview">
+        <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}" style="max-width: 200px;">
+        <h3>{{ artwork.title }}</h3>
+        <p>By {{ artwork.artist.username }}</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="confirmation-actions">
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'artwork_detail' artwork.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
