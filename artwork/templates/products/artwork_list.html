@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+    <style> 
+        
+    </style>
+{% endblock %}
+
+{% block title %}Artwork Collection - Art Gallery{% endblock %}
+{% block content %}
+<div class="artwork-list-container">
+    <h1>Artwork Collection</h1>
+    
+    <div class="filter-section">
+        <h3>Filter by Category</h3>
+        <div class="category-filters">
+            <a href="{% url 'artwork_list' %}" class="category-filter {% if not request.GET.category %}active{% endif %}">All</a>
+            {% for category in categories %}
+            <a href="{% url 'artwork_list' %}?category={{ category.slug }}" 
+               class="category-filter {% if request.GET.category == category.slug %}active{% endif %}">
+                {{ category.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="artwork-grid">
+        {% for artwork in artworks %}
+        <div class="artwork-item">
+            <a href="{% url 'artwork_detail' artwork.pk %}">
+                <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}">
+                <h3>{{ artwork.title }}</h3>
+                <p class="artist">By {{ artwork.artist.username }}</p>
+                <p class="price">${{ artwork.price }}</p>
+                {% if artwork.stock > 0 %}
+                <p class="in-stock">In Stock ({{ artwork.stock }})</p>
+                {% else %}
+                <p class="out-of-stock">Out of Stock</p>
+                {% endif %}
+            </a>
+        </div>
+        {% empty %}
+        <p>No artwork available at the moment.</p>
+        {% endfor %}
+    </div>
+    
+    {% if user.is_authenticated and is_artist %}
+    <div class="add-artwork-btn">
+        <a href="{% url 'artwork_create' %}" class="btn btn-primary">Add New Artwork</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
