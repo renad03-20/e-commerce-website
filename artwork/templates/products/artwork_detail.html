@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/artwork_detail.css' %}">
+{% endblock %}  
+
+{% block content %}
+<div class="artwork-detail-container">
+    <div class="artwork-detail">
+        <div class="artwork-image">
+            <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}">
+        </div>
+        
+        <div class="artwork-info">
+            <h1>{{ artwork.title }}</h1>
+            <p class="artist">By {{ artwork.artist.username }}</p>
+            <p class="price">${{ artwork.price }}</p>
+            
+            <div class="description">
+                <h3>Description</h3>
+                <p>{{ artwork.description }}</p>
+            </div>
+            
+            <div class="details">
+                <p><strong>Category:</strong> {{ artwork.category.name|default:"Uncategorized" }}</p>
+                <p><strong>Tags:</strong> 
+                    {% for tag in artwork.tags.all %}
+                    <span class="tag">{{ tag.name }}</span>
+                    {% empty %}
+                    No tags
+                    {% endfor %}
+                </p>
+                <p><strong>Stock:</strong> 
+                    {% if artwork.stock > 0 %}
+                    <span class="in-stock">{{ artwork.stock }} available</span>
+                    {% else %}
+                    <span class="out-of-stock">Out of stock</span>
+                    {% endif %}
+                </p>
+                <p><strong>Added:</strong> {{ artwork.created_at|date:"F j, Y" }}</p>
+            </div>
+            
+            {% if artwork.stock > 0 %}
+            <div class="purchase-options">
+                <button class="btn btn-primary">Add to Cart</button>
+            </div>
+            {% endif %}
+            
+            {% if user == artwork.artist or user.is_superuser %}
+            <div class="artist-actions">
+                <a href="{% url 'artwork_update' artwork.pk %}" class="btn btn-secondary">Edit</a>
+                <a href="{% url 'artwork_delete' artwork.pk %}" class="btn btn-danger">Delete</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
