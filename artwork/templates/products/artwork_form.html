@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="artwork-form-container">
+    <h1>{{ title }}</h1>
+    
+    <form method="post" enctype="multipart/form-data" class="artwork-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.title.id_for_label }}">Title</label>
+            {{ form.title }}
+            {{ form.title.errors }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.description.id_for_label }}">Description</label>
+            {{ form.description }}
+            {{ form.description.errors }}
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.price.id_for_label }}">Price ($)</label>
+                {{ form.price }}
+                {{ form.price.errors }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.stock.id_for_label }}">Stock</label>
+                {{ form.stock }}
+                {{ form.stock.errors }}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.image.id_for_label }}">Image</label>
+            {{ form.image }}
+            {{ form.image.errors }}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.category.id_for_label }}">Category</label>
+            {{ form.category }}
+            {{ form.category.errors }}
+        </div>
+        
+        <div class="form-group">
+            <label>Tags</label>
+            <div class="tag-checkboxes">
+                {{ form.tags }}
+            </div>
+            {{ form.tags.errors }}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% if artwork %}{% url 'artwork_detail' artwork.pk %}{% else %}{% url 'artwork_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
