@@ -1,61 +1,92 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/artwork_form.css' %}">
+{% endblock %}
 {% block content %}
-<div class="artwork-form-container">
+<div class="form-container">
     <h1>{{ title }}</h1>
     
     <form method="post" enctype="multipart/form-data" class="artwork-form">
         {% csrf_token %}
         
+        {% if form.non_field_errors %}
+            <div class="alert alert-error">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+        
         <div class="form-group">
-            <label for="{{ form.title.id_for_label }}">Title</label>
+            <label for="{{ form.title.id_for_label }}">Artwork Title *</label>
             {{ form.title }}
-            {{ form.title.errors }}
+            {% if form.title.errors %}
+                <div class="error">{{ form.title.errors }}</div>
+            {% endif %}
         </div>
         
         <div class="form-group">
-            <label for="{{ form.description.id_for_label }}">Description</label>
+            <label for="{{ form.description.id_for_label }}">Description *</label>
             {{ form.description }}
-            {{ form.description.errors }}
+            {% if form.description.errors %}
+                <div class="error">{{ form.description.errors }}</div>
+            {% endif %}
+            <small>Describe your artwork, including inspiration, techniques used, dimensions, etc.</small>
         </div>
         
         <div class="form-row">
             <div class="form-group">
-                <label for="{{ form.price.id_for_label }}">Price ($)</label>
+                <label for="{{ form.price.id_for_label }}">Price ($) *</label>
                 {{ form.price }}
-                {{ form.price.errors }}
+                {% if form.price.errors %}
+                    <div class="error">{{ form.price.errors }}</div>
+                {% endif %}
             </div>
             
             <div class="form-group">
-                <label for="{{ form.stock.id_for_label }}">Stock</label>
+                <label for="{{ form.stock.id_for_label }}">Quantity Available *</label>
                 {{ form.stock }}
-                {{ form.stock.errors }}
+                {% if form.stock.errors %}
+                    <div class="error">{{ form.stock.errors }}</div>
+                {% endif %}
             </div>
         </div>
         
         <div class="form-group">
-            <label for="{{ form.image.id_for_label }}">Image</label>
+            <label for="{{ form.image.id_for_label }}">Artwork Image *</label>
             {{ form.image }}
-            {{ form.image.errors }}
+            {% if form.image.errors %}
+                <div class="error">{{ form.image.errors }}</div>
+            {% endif %}
+            <small>Upload a high-quality image of your artwork.</small>
         </div>
         
         <div class="form-group">
             <label for="{{ form.category.id_for_label }}">Category</label>
             {{ form.category }}
-            {{ form.category.errors }}
+            {% if form.category.errors %}
+                <div class="error">{{ form.category.errors }}</div>
+            {% endif %}
+            <small>Select the category that best fits your artwork.</small>
         </div>
         
         <div class="form-group">
             <label>Tags</label>
             <div class="tag-checkboxes">
-                {{ form.tags }}
+                {% for checkbox in form.tags %}
+                    <div class="tag-checkbox">
+                        {{ checkbox.tag }} {{ checkbox.choice_label }}
+                    </div>
+                {% endfor %}
             </div>
-            {{ form.tags.errors }}
+            {% if form.tags.errors %}
+                <div class="error">{{ form.tags.errors }}</div>
+            {% endif %}
+            <small>Select relevant tags to help customers find your artwork.</small>
         </div>
         
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="submit" class="btn btn-primary">Save Artwork</button>
             <a href="{% if artwork %}{% url 'artwork_detail' artwork.pk %}{% else %}{% url 'artwork_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
