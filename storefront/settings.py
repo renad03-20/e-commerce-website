@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-a2=zblqo_%yk)zton#au+q006!jze+40@$&c=20f@+ty=agm-v
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.1.28', '127.0.0.1' ]
 
 INSTALLED_APPS = [
     'django.contrib.admin',        #! admin interface
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'cart',
     'orders',
     'pages',
+    'artwork',
 ]
 
 MIDDLEWARE = [
@@ -135,5 +136,11 @@ else:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_REDIRECT_URL = "base:home"
-LOGOUT_REDIRECT_URL = "base:login"
+# Authentication settings
+LOGIN_REDIRECT_URL = 'home'  # Redirect to home after login
+LOGOUT_REDIRECT_URL = 'home'  # Redirect to home after logout
+LOGIN_URL = 'login'  # URL to redirect to for login
+
+# Media files (Uploaded images)
+MEDIA_URL = '/media/'  # URL prefix for media files
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Path where media is stored
