@@ -1,0 +1,161 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    background-color: #f9f9f9;
+    color: #222;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5fbcb 25%, #bdf0ce 50%, #97c0dc 75%, #dd81c6 100%);
+
+}
+
+.therightside {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 0px 60px 60px 0px;
+}
+
+.therightside img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.theleftside {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.theleftside form {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 20px;
+}
+
+.theleftside a {
+    text-align: center;
+    color: #007bff;
+    text-decoration: none;
+}
+
+.theleftside a:hover {
+    text-decoration: underline;
+}
+
+/* Button styling */
+button[type="submit"] {
+    width: 30%;
+    padding: 12px;
+    background-color: #007953;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button[type="submit"]:hover {
+    background-color: #0b9066;
+}
+
+input {
+    background-color: rgba(255, 255, 255, 0.15); /* Semi-transparent white background */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for definition */
+    border-radius: 10px; /* Rounded corners */
+    padding: 10px 15px; /* Inner spacing */
+    color: #ffffff; /* Text color */
+    font-size: 16px; /* Font size */
+    backdrop-filter: blur(10px); /* The key for the glass effect: blurs content behind it */
+    -webkit-backdrop-filter: blur(10px); /* Vendor prefix for Safari compatibility */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    outline: none; /* Remove default outline on focus */
+    width: 100%; /* Full width */
+    height: 45px; /* Fixed height */
+    margin-bottom: 30px; /* Spacing between inputs */
+}
+
+input::placeholder {
+    color: rgba(255, 255, 255, 0.7); /* Placeholder text color */
+}
+
+input:focus {
+    border-color: rgba(255, 255, 255, 0.5); /* Border color on focus */
+}
+label {
+    color: #fff;
+    font-weight:300;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* Subtle text shadow for better readability */
+}
+
+.alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error {
+    color: #dc3545;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.form-text {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 5px;
+}
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr;
+        grid-template-rows: 40vh 1fr;
+    }
+    
+    .therightside {
+        order: 1;
+    }
+    
+    .theleftside {
+        order: 2;
+        padding: 20px;
+    }
+}
