@@ -251,6 +251,50 @@
     transform: translateY(-1px);
 }
 
+/* Add to your existing CSS */
+.add-to-cart-btn {
+    background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.add-to-cart-btn:hover {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.out-of-stock {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.quantity-selector {
+    margin-bottom: 1rem;
+}
+
+.quantity-selector label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.quantity-selector input {
+    width: 80px;
+    padding: 0.5rem;
+    border: 2px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .artwork-list-container {
