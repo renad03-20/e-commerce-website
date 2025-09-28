@@ -33,11 +33,19 @@
                 <h3>{{ artwork.title }}</h3>
                 <p class="artist">By {{ artwork.artist.username }}</p>
                 <p class="price">${{ artwork.price }}</p>
-                {% if artwork.stock > 0 %}
-                <p class="in-stock">In Stock ({{ artwork.stock }})</p>
-                {% else %}
-                <p class="out-of-stock">Out of Stock</p>
-                {% endif %}
+                <div class="artwork-actions">
+                    {% if artwork.stock > 0 %}
+                        <form method="post" action="{% url 'add_to_cart' artwork.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit" class="add-to-cart-btn">
+                                <i class="fa-solid fa-cart-plus"></i> Add to Cart
+                            </button>
+                        </form>
+                    {% else %}
+                            <span class="out-of-stock">Out of Stock</span>
+                    {% endif %}
+                </div>
             </a>
         </div>
         {% empty %}
