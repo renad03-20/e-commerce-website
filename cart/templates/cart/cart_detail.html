@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/cart.css' %}">
+{% endblock %}
+
+{% block title %}Shopping Cart - Art Gallery{% endblock %}
+
+{% block content %}
+<div class="cart-container">
+    <div class="container">
+        <h1>Your Shopping Cart</h1>
+        
+        {% if cart_items %}
+        <div class="cart-content">
+            <div class="cart-items">
+                {% for item in cart_items %}
+                <div class="cart-item">
+                    <div class="item-image">
+                        <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork.title }}">
+                    </div>
+                    
+                    <div class="item-details">
+                        <h3>{{ item.artwork.title }}</h3>
+                        <p class="artist">By {{ item.artwork.artist.username }}</p>
+                        <p class="price">${{ item.artwork.price }} each</p>
+                    </div>
+                    
+                    <div class="item-quantity">
+                        <form method="post" action="{% url 'update_cart' item.id %}">
+                            {% csrf_token %}
+                            <div class="quantity-controls">
+                                <button type="button" class="quantity-btn" onclick="decrementQuantity({{ item.id }})">-</button>
+                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.artwork.stock }}" 
+                                       id="quantity-{{ item.id }}" onchange="updateQuantity({{ item.id }})">
+                                <button type="button" class="quantity-btn" onclick="incrementQuantity({{ item.id }})">+</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="item-total">
+                        <p class="total-price">${{ item.get_total_price }}</p>
+                    </div>
+                    
+                    <div class="item-actions">
+                        <form method="post" action="{% url 'remove_from_cart' item.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="remove-btn">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="cart-summary">
+                <div class="summary-card">
+                    <h3>Order Summary</h3>
+                    <div class="summary-details">
+                        <div class="summary-row">
+                            <span>Subtotal ({{ cart_total_quantity }} items)</span>
+                            <span>${{ cart_total_price }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Shipping</span>
+                            <span>$10.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Tax</span>
+                            <span>${{ cart_total_price|floatformat:2 }}</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total</span>
+                            <span>${{ cart_total_price|add:10|add:cart_total_price }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="checkout-actions">
+                        <a href="{% url 'artwork_list' %}" class="continue-shopping">
+                            Continue Shopping
+                        </a>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'checkout' %}" class="checkout-btn">
+                            Proceed to Checkout
+                        </a>
+                        {% else %}
+                        <a href="{% url 'login' %}?next={% url 'cart_detail' %}" class="checkout-btn">
+                            Login to Checkout
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-cart">
+            <div class="empty-cart-content">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <h2>Your cart is empty</h2>
+                <p>Discover amazing artwork and add them to your cart</p>
+                <a href="{% url 'artwork_list' %}" class="browse-artworks-btn">
+                    Browse Artworks
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function incrementQuantity(itemId) {
+    const input = document.getElementById('quantity-' + itemId);
+    const max = parseInt(input.max);
+    if (input.value < max) {
+        input.value = parseInt(input.value) + 1;
+        updateQuantity(itemId);
+    }
+}
+
+function decrementQuantity(itemId) {
+    const input = document.getElementById('quantity-' + itemId);
+    if (input.value > 1) {
+        input.value = parseInt(input.value) - 1;
+        updateQuantity(itemId);
+    }
+}
+
+function updateQuantity(itemId) {
+    const input = document.getElementById('quantity-' + itemId);
+    const form = input.closest('form');
+    form.submit();
+}
+</script>
+{% endblock %}
