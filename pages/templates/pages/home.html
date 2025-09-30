@@ -7,262 +7,136 @@
 
 {% block title %}Home - Art Gallery{% endblock %}
 
+
 {% block content %}
-<div class="intro">
-    <div class="container">
-        <div class="header-text">
-            <h1>Bring Your Walls to Life</h1>
-            <h5>Explore a curated collection of original artworks, <br>each piece telling its own story and designed to inspire, <br>captivate, and transform your space into something truly unforgettable.</h5>
-        </div>
-        <div class="header-search-engin">
-            <input type="text" name="search" id="search">
-        </div>
+<!-- Hero Section -->
+ <div class="intro">
+    <div class="header-text">
+        <h1>Bring Your Walls to Life</h1>
+        <h5>Explore a curated collection of original artworks, <br>each piece telling its own story and designed to inspire, <br>captivate, and transform your space into something truly unforgettable.</h5>
     </div>
 </div>
 <!-- featured products -->
- <div class="featured-product">
+<div class="featured-product">
     <div class="container">
         <h1>Featured Products</h1>
         <div class="wrapper">
+            {% for artwork in featured_artworks %}
             <div class="card">
                 <div class="card-img">
-                    <img src="static/img/IMG_5804.jpg" alt="">
-                    <span class="discount-badge">30%</span>
+                    <a href="{% url 'artwork_detail' artwork.pk %}">
+                        <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}">
+                    </a>
+                    {% if artwork.discount_percentage %}
+                    <span class="discount-badge">{{ artwork.discount_percentage }}%</span>
+                    {% endif %}
                 </div>
-                <h6>A Glimpse of Soul</h6>
+                <h6>{{ artwork.title }}</h6>
                 <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
+                    {% if artwork.discount_price %}
+                    <span class="original">${{ artwork.price }}</span>
+                    <span class="discount">${{ artwork.discount_price }}</span>
+                    {% else %}
+                    <span class="discount">${{ artwork.price }}</span>
+                    {% endif %}
+                    <a href="{% url 'add_to_cart' artwork.id %}" class="add-to-cart">
+                        <i class="fa-solid fa-cart-plus"></i>
+                    </a>
                 </div>
             </div>
-            <div class="card">
-                <div class="card-img">
-                    <img src="static/img/IMG_5805.jpg" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>Two Cliffs, One Line</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-img">
-                    <img src="static/img/IMG_5806.jpg" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>Shelter from the Storm </h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-img">
-                    <img src="static/img/IMG_5807.jpg" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>Portrait in Blush</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
+            {% empty %}
+            <p>No featured artworks available at the moment.</p>
+            {% endfor %}
         </div>
+        <a href="{% url 'artwork_list' %}" class="view-more-btn">View More</a>
     </div>
- </div>
- <!-- Categories -->
-  <div class="categories">
+</div>
+
+<!-- Categories -->
+<div class="categories">
     <div class="container">
         <h2>Categories</h2>
-        <p>something i don't know</p>
+        <p>Browse our diverse collection of artwork categories</p>
         <div class="category-cards">
-            <div class="type tall">
-                <img src="static/img/sketch.jpg">
-                <h4>sketchs</h4>
+            {% for category in categories %}
+            <div class="type {% cycle 'tall' '' 'tall' '' %}">
+                <a href="{% url 'artwork_list' %}?category={{ category.slug }}">
+                    <img src="{% static 'img/category-placeholder.jpg' %}" alt="{{ category.name }}">
+                    <h4>{{ category.name }}</h4>
+                </a>
             </div>
-            <div class="type">
-                <img src="static/img/supplies.jpg">
-                <h4>art supplies</h4>
-            </div>
-                <div class="type tall">
-                <img src="static/img/paint.jpg">
-                <h4>paints</h4>
-            </div>
-            <div class="type">
-                <img src="static/img/prints.jpg">
-                <h4>prints</h4>
-            </div>
+            {% empty %}
+            <p>No categories available yet.</p>
+            {% endfor %}
         </div>
     </div>
-  </div>
-  <!-- popular products -->
-   <div class="popular-products">
-    <div class="container">
-        <div class="section-header">
-            <div class="text-content">
-                <h2>most popular products</h2>
-                <p>explore our most popular products and but them with a discount</p>
-            </div>
-            <a href="#" class="view-all-btn">View All ></a>
-        </div>
-        <div class="wrapper">
-            <div class="card">
-                <div>
-                    <img src="static/img/colorfullsketch.png" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>sketch/paint book</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div>
-                    <img src="static/img/color book.webp" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>coloring book</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div>
-                    <img src="static/img/colormarkers.webp" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>coloring pens</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div>
-                    <img src="static/img/colorbook1.png" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>small water paint book</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div>
-                    <img src="static/img/pastels.png" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>oil pastels</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                </div>
-            </div>
-            <div class="card">
-                <div>
-                    <img src="static/img/pens.png" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>colorfull pens</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div>
-                    <img src="static/img/screen.png" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>peads screen</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-            <div class="card">
-                <div>
-                    <img src="static/img/markers1.png" alt="">
-                    <span class="discount-badge">30%</span>
-                </div>
-                <h6>easy water color</h6>
-                <div class="pricing">
-                    <span class="original">100</span>
-                    <span class="discount">50</span>
-                    <a href="#"><i class="fa-solid fa-cart-plus"></i></a>
-                </div>
-            </div>
-        </div>
-    </div>
-   </div>
+</div>
+
 <!-- question Area -->
- <div class="question-boxs">
+<div class="question-boxs">
     <div class="container">
         <div class="main-box">
             <div class="left-side">
-            <h3>Frequently asked questions</h3>
-            <p>something that makes sense that soposed to go here <br>  and you cant beat me no matter how much</p>
-            <a href="#" class="ask-question-btn">View All ></a>
+                <h3>Frequently asked questions</h3>
+                <p>Find answers to common questions about purchasing artwork, shipping, and more.</p>
+                <a href="#" class="ask-question-btn">View All</a>
             </div>
             <div class="right-side">
-            <div class="faq-wrapper">
-                <div class="faq-box">
-                    <div class="faq-question" onclick="toggleFAQ(event)">
-                        <h3>Question text here</h3>
-                        <i class="fa-solid fa-arrow-down"></i>
+                <div class="faq-wrapper">
+                    <div class="faq-box">
+                        <div class="faq-question" onclick="toggleFAQ(event)">
+                            <h3>How do I purchase artwork?</h3>
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div class="answer-content">
+                            <p>Simply browse our gallery, add items to your cart, and proceed to checkout. You'll need to create an account to complete your purchase.</p>
+                        </div>
                     </div>
-                    <div class="answer-content">
-                        <p>Answer text here</p>
+                    <div class="faq-box">
+                        <div class="faq-question" onclick="toggleFAQ(event)">
+                            <h3>Do you ship internationally?</h3>
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div class="answer-content">
+                            <p>Yes, we ship worldwide. Shipping costs vary by location and will be calculated at checkout.</p>
+                        </div>
+                    </div>
+                    <div class="faq-box">
+                        <div class="faq-question" onclick="toggleFAQ(event)">
+                            <h3>Can I return artwork?</h3>
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div class="answer-content">
+                            <p>We accept returns within 30 days of purchase if the artwork is in its original condition. Please contact us for return instructions.</p>
+                        </div>
+                    </div>
+                    <div class="faq-box">
+                        <div class="faq-question" onclick="toggleFAQ(event)">
+                            <h3>How are the artworks packaged?</h3>
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div class="answer-content">
+                            <p>All artworks are carefully packaged with protective materials to ensure they arrive in perfect condition.</p>
+                        </div>
                     </div>
                 </div>
-                <div class="faq-box">
-                    <div class="faq-question" onclick="toggleFAQ(event)">
-                        <h3>Question text here</h3>
-                        <i class="fa-solid fa-arrow-down"></i>
-                    </div>
-                    <div class="answer-content">
-                        <p>Answer text here</p>
-                    </div>
-                </div>
-                <div class="faq-box">
-                    <div class="faq-question" onclick="toggleFAQ(event)">
-                        <h3>Question text here</h3>
-                        <i class="fa-solid fa-arrow-down"></i>
-                    </div>
-                    <div class="answer-content">
-                        <p>Answer text here</p>
-                    </div>
-                </div>
-                <div class="faq-box">
-                    <div class="faq-question" onclick="toggleFAQ(event)">
-                        <h3>Question text here</h3>
-                        <i class="fa-solid fa-arrow-down"></i>
-                    </div>
-                    <div class="answer-content">
-                        <p>Answer jljljjlkjl here</p>
-                    </div>
-                </div>
-            </div>
             </div>
         </div>
     </div>
- </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/home.js' %}"></script>
+<script>
+// FAQ toggle functionality
+function toggleFAQ(event) {
+    const faqQuestion = event.currentTarget;
+    const answerContent = faqQuestion.nextElementSibling;
+    
+    // Toggle active class
+    faqQuestion.classList.toggle('active');
+    answerContent.classList.toggle('active');
+}
+</script>
 {% endblock %}
