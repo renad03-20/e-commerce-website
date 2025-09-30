@@ -2,9 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-    <style> 
-        
-    </style>
+<link rel="stylesheet" href="{% static 'css/artwork_list.css' %}">
 {% endblock %}
 
 {% block title %}Artwork Collection - Art Gallery{% endblock %}
@@ -35,7 +33,7 @@
                 <p class="price">${{ artwork.price }}</p>
                 <div class="artwork-actions">
                     {% if artwork.stock > 0 %}
-                        <form method="post" action="{% url 'add_to_cart' artwork.pk %}">
+                        <form method="post" action="{% url 'cart:add_to_cart' artwork.pk %}">
                             {% csrf_token %}
                             <input type="hidden" name="quantity" value="1">
                             <button type="submit" class="add-to-cart-btn">
