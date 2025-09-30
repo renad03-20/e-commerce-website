@@ -22,8 +22,9 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     #! any url that start with(playground/)should be handled in the playground app 
-    path("", include("pages.urls")), #? this is^^^^what this line mean and so we have to do this any time we create a new app
+    path('', include("pages.urls")), #? this is^^^^what this line mean and so we have to do this any time we create a new app
     path('artwork/', include('artwork.urls')),
+    path('cart/', include('cart.urls'))
 ]
 
 # This serves media files during development
