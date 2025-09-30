@@ -42,7 +42,7 @@
             
             {% if artwork.stock > 0 %}
                 <div class="purchase-options">
-                    <form method="post" action="{% url 'add_to_cart' artwork.pk %}">
+                    <form method="post" action="{% url 'cart:add_to_cart' artwork.pk %}">
                         {% csrf_token %}
                         <div class="quantity-selector">
                             <label for="quantity">Quantity:</label>
