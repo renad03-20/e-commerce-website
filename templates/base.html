@@ -9,36 +9,90 @@
     <!-- fonts  -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?your-font-query" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playwrite+AU+NSW:wght@300;400&display=swap" rel="stylesheet">
 
     <!-- static CSS -->
-    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
 
     {% block extra_css %}{% endblock %}
 
-    <title>{% block title %}Document{% endblock %}</title>
+    <title>{% block title %}Art Gallery{% endblock %}</title>
 </head>
 <body>
-    <nav>
-        <div class="container">
-            <img src="{% static 'img/logo.png' %}" class="logo">
-            <ul>
-                <li><a href="#">Home</a></li>
-                <li><a href="#">Categories</a></li>
-                <li><a href="#">Contact Us</a></li>
-                <li><a href="#"><i class="fa-solid fa-user"></i></a></li>
-                <li><a href="#"><i class="fa-solid fa-cart-shopping"></i></a></li>
-            </ul>
+    {% block navigation %}
+        <!-- Default nav for other pages -->
+        <div class="intro1">
+            <div class="header-container">
+                <nav>
+                    <a href="{% url 'home' %}">
+                        <img src="{% static 'img/logo.png' %}" class="logo" alt="Art Gallery Logo">
+                    </a>
+                    <ul>
+                        <li><a href="{% url 'home' %}">Home</a></li>
+                        <li><a href="{% url 'artwork_list' %}">Gallery</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                        
+                        {% if user.is_authenticated %}
+                            <!-- User is logged in -->
+                            <li>
+                                <a href="#">
+                                    <i class="fa-solid fa-user"></i> {{ user.username }}
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'cart:cart_detail' %}">
+                                    <i class="fa-solid fa-cart-shopping"></i>
+                                    {% if cart_total_quantity and cart_total_quantity > 0 %}
+                                        <span class="cart-count">{{ cart_total_quantity }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            {% if is_artist %}
+                                <li><a href="{% url 'artwork_create' %}">Add Artwork</a></li>
+                                <li><a href="{% url 'artist_dashboard' %}">My Dashboard</a></li>
+                            {% endif %}
+                            <li><a href="{% url 'logout' %}">Logout</a></li>
+                        {% else %}
+                            <!-- User is not logged in -->
+                            <li><a href="{% url 'login' %}"><i class="fa-solid fa-user"></i> Login</a></li>
+                            <li><a href="{% url 'signup' %}">Sign Up</a></li>
+                            <li>
+                                <a href="{% url 'cart:cart_detail' %}">
+                                    <i class="fa-solid fa-cart-shopping"></i>
+                                    {% if cart_total_quantity and cart_total_quantity > 0 %}
+                                        <span class="cart-count">{{ cart_total_quantity }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
         </div>
-    </nav>
+    {% endblock %}
 
-    {% block content %}{% endblock %}
-
-    <div class="footer">
-        <div class="container">
-            <p>made with love by Rinad</p>
+    <!-- Messages display -->
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
         </div>
+        {% endfor %}
     </div>
+    {% endif %}
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Art Gallery. All rights reserved.</p>
+        </div>
+    </footer> -->
 
     {% block extra_js %}{% endblock %}
 </body>
