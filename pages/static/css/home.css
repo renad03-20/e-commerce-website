@@ -1,37 +1,18 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-html, body {
-    height: 100%;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-}
-html {
-    scroll-behavior: smooth;
-}
-body {
-    color: linear-gradient(135deg, #f8d7da 0%, #f5fbcb 25%, #bdf0ce 50%, #97c0dc 75%, #dd81c6 100%);
-    font-family: "Saira", sans-serif;
-}
-.intro{
+
+/* .intro{
     background-image: url('../img/headerimg.jpg');
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-    /* height: 100%; */
     margin-top: 0px;
     padding: 0px 0;
-    /* min-height: 80vh; */
     display: flex;
     flex-direction: column;
-}
+} 
+  */
 
 .container {
     padding: 5px 20px;
-    /* max-width: px; */
     margin: 0 auto;
     width: 100%;
 }
