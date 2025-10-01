@@ -3,10 +3,12 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .models import Artwork, Category, Tag
 from .forms import ArtworkForm
+from cart.models import CartItem
 
 def is_artist(user):
     return user.groups.filter(name='Artists').exists() or user.is_superuser
 
+@login_required
 def artwork_list(request):
     artworks = Artwork.objects.filter(stock__gt=0)
     categories = Category.objects.all()
@@ -87,11 +89,28 @@ def artwork_delete(request, pk):
         return redirect('artwork_list')
     
     if request.method == 'POST':
-        artwork.delete()
-        messages.success(request, 'Artwork deleted successfully!')
-        return redirect('artwork_list')
+        try:
+            #! First, remove any cart items that reference this artwork
+            try:
+                from cart.models import CartItem
+                CartItem.objects.filter(artwork=artwork).delete()
+            except Exception as e:
+                #! If cart items can't be deleted due to migration issues, continue anyway
+                print(f"Warning: Could not delete cart items: {e}")
+            
+            #! Delete the artwork
+            artwork.delete()
+            messages.success(request, 'Artwork deleted successfully!')
+            return redirect('artwork_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error deleting artwork: {str(e)}')
+            return redirect('artwork_detail', pk=artwork.pk)
     
     context = {
         'artwork': artwork
     }
     return render(request, 'products/artwork_delete.html', context)
+
+def artist_dashboard(request):
+    return render(request, 'products/artist_dashboard.html')
