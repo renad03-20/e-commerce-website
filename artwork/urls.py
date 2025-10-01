@@ -7,4 +7,5 @@ urlpatterns = [
     path('create/', views.artwork_create, name='artwork_create'),
     path('<int:pk>/update/', views.artwork_update, name='artwork_update'),
     path('<int:pk>/delete/', views.artwork_delete, name='artwork_delete'),
+    path('artist_dashboard', views.artist_dashboard, name='artist_dashboard')
 ]
