@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/artist_dashboard.css' %}">
+{% endblock %}
+
+{% block title %}Shopping Cart - Art Gallery{% endblock %}
+
+{% block content %} 
+<div class="dashboard-container">
+    <h1>Welcome back, {{ user.username }}</h1>
+    <h3>You have uploaded: {{user.artwork}}</h3>
+    <h3>Total sales: {{user.artwork}}</h3>
+    <h3>Revenue:{{user.artwork}}</h3>
+
+    <div class="dashboard-main">
+            <h2>My Artworks</h2>
+            {% if artworks %}
+                <div class="artwork-list">
+                    {% for artwork in artworks %}
+                    <div class="artwork-item">
+                        <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}">
+                        <h3>{{ artwork.title }}</h3>
+                        <p class="price">${{ artwork.price }}</p>
+                        <p class="stock">Stock: {{ artwork.stock }}</p>
+                        <div class="artwork-actions">
+                            <a href="{% url 'artwork_update' artwork.pk %}" class="btn btn-secondary">Edit</a>
+                            <form method="post" action="{% url 'artwork_delete' artwork.pk %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this artwork?');">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>You have not uploaded any artworks yet. <a href="{% url 'artwork_create' %}">Add your first artwork</a>.</p>
+            {% endif %}
+        
+    </div>
+
+{% endblock%}
