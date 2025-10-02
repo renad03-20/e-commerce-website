@@ -3,41 +3,200 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/artist_dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/base.css' %}">
 {% endblock %}
 
-{% block title %}Shopping Cart - Art Gallery{% endblock %}
+{% block title %}Artist Dashboard - Art Gallery{% endblock %}
 
-{% block content %} 
+{% block content %}
 <div class="dashboard-container">
-    <h1>Welcome back, {{ user.username }}</h1>
-    <h3>You have uploaded: {{user.artwork}}</h3>
-    <h3>Total sales: {{user.artwork}}</h3>
-    <h3>Revenue:{{user.artwork}}</h3>
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+        <div class="welcome-content">
+            <h1>👋 Welcome back, {{ user.username }}!</h1>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-palette"></i></div>
+                    <div class="stat-info">
+                        <h3>{{ total_artworks }}</h3>
+                        <p>Artworks Uploaded</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
+                    <div class="stat-info">
+                        <h3>{{ total_sales }}</h3>
+                        <p>Total Sales</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-chart-simple"></i></div>
+                    <div class="stat-info">
+                        <h3>${{ total_revenue }}</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"></div>
+                    <div class="stat-info">
+                        <h3>{{ artworks.count }}</h3>
+                        <p>Active Listings</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="action-section">
+            <a href="{% url 'artwork_create' %}" class="add-artwork-btn">
+                <span class="btn-icon">+</span>
+                Add New Artwork
+            </a>
+        </div>
+    </div>
 
+    <!-- Main Dashboard Content -->
     <div class="dashboard-main">
-            <h2>My Artworks</h2>
-            {% if artworks %}
-                <div class="artwork-list">
-                    {% for artwork in artworks %}
-                    <div class="artwork-item">
-                        <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}">
-                        <h3>{{ artwork.title }}</h3>
-                        <p class="price">${{ artwork.price }}</p>
-                        <p class="stock">Stock: {{ artwork.stock }}</p>
-                        <div class="artwork-actions">
-                            <a href="{% url 'artwork_update' artwork.pk %}" class="btn btn-secondary">Edit</a>
-                            <form method="post" action="{% url 'artwork_delete' artwork.pk %}" style="display:inline;">
+        <!-- Recent Artworks Section -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2> My Recent Artworks</h2>
+                {% if artworks %}
+                <a href="{% url 'artwork_list' %}?artist={{ user.username }}" class="view-all-link">
+                    View All Artworks →
+                </a>
+                {% endif %}
+            </div>
+            
+            {% if recent_artworks %}
+            <div class="artworks-table">
+                <div class="table-header">
+                    <div class="table-col image-col">Image</div>
+                    <div class="table-col title-col">Title</div>
+                    <div class="table-col price-col">Price</div>
+                    <div class="table-col stock-col">Stock</div>
+                    <div class="table-col status-col">Status</div>
+                    <div class="table-col actions-col">Actions</div>
+                </div>
+                
+                {% for artwork in recent_artworks %}
+                <div class="table-row">
+                    <div class="table-col image-col">
+                        <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}" class="artwork-thumbnail">
+                    </div>
+                    <div class="table-col title-col">
+                        <strong>{{ artwork.title }}</strong>
+                        <small>Created: {{ artwork.created_at|date:"M d, Y" }}</small>
+                    </div>
+                    <div class="table-col price-col">
+                        ${{ artwork.price }}
+                    </div>
+                    <div class="table-col stock-col">
+                        <span class="stock-badge {% if artwork.stock > 0 %}in-stock{% else %}out-of-stock{% endif %}">
+                            {{ artwork.stock }}
+                        </span>
+                    </div>
+                    <div class="table-col status-col">
+                        {% if artwork.stock > 0 %}
+                        <span class="status-active">Active</span>
+                        {% else %}
+                        <span class="status-inactive">Out of Stock</span>
+                        {% endif %}
+                    </div>
+                    <div class="table-col actions-col">
+                        <div class="action-buttons">
+                            <a href="{% url 'artwork_detail' artwork.pk %}" class="btn-view" title="View">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            <a href="{% url 'artwork_update' artwork.pk %}" class="btn-edit" title="Edit">
+                                <i class="fa-regular fa-pen"></i>
+                            </a>
+                            <form method="post" action="{% url 'artwork_delete' artwork.pk %}" class="delete-form">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this artwork?');">Delete</button>
+                                <button type="submit" class="btn-delete" title="Delete" 
+                                        onclick="return confirm('Are you sure you want to delete \"{{ artwork.title }}\"?');">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </form>
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
+                {% endfor %}
+            </div>
             {% else %}
-                <p>You have not uploaded any artworks yet. <a href="{% url 'artwork_create' %}">Add your first artwork</a>.</p>
+            <div class="empty-state">
+                <div class="empty-icon">🎨</div>
+                <h3>No Artworks Yet</h3>
+                <p>Start your artistic journey by uploading your first artwork!</p>
+                <a href="{% url 'artwork_create' %}" class="btn btn-primary">
+                    Upload Your First Artwork
+                </a>
+            </div>
             {% endif %}
-        
-    </div>
+        </div>
 
-{% endblock%}
+        <!-- Sales Overview Section -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Sales Overview</h2>
+            </div>
+            <div class="sales-overview">
+                <div class="sales-stats">
+                    <div class="sales-stat">
+                        <span class="stat-label">Best-selling Artwork:</span>
+                        <span class="stat-value">
+                            {% if best_selling_artwork %}
+                                "{{ best_selling_artwork.title }}"
+                            {% else %}
+                                "No sales yet"
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="sales-stat">
+                        <span class="stat-label">Orders This Month:</span>
+                        <span class="stat-value">{{ total_sales }}</span>
+                    </div>
+                    <div class="sales-stat">
+                        <span class="stat-label">Total Revenue:</span>
+                        <span class="stat-value">${{ total_revenue }}</span>
+                    </div>
+                    <div class="sales-stat">
+                        <span class="stat-label">Available Artworks:</span>
+                        <span class="stat-value">{{ artworks.count }}</span>
+                    </div>
+                </div>
+                
+                <!-- Placeholder for future chart -->
+                <div class="chart-placeholder">
+                    <div class="chart-icon">📈</div>
+                    <p>Sales chart will appear here</p>
+                    <small>Coming soon with order tracking</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>⚡ Quick Actions</h2>
+            </div>
+            <div class="quick-actions">
+                <a href="{% url 'artwork_create' %}" class="quick-action-btn">
+                    <span class="action-icon"><i class="fa-solid fa-plus"></i></span>
+                    <span class="action-text">Add New Artwork</span>
+                </a>
+                <a href="{% url 'artwork_list' %}?artist={{ user.username }}" class="quick-action-btn">
+                    <span class="action-icon"><i class="fa-solid fa-eye"></i></span>
+                    <span class="action-text">View My Gallery</span>
+                </a>
+                <a href="#" class="quick-action-btn">
+                    <span class="action-icon"><i class="fa-solid fa-chart-simple"></i></span>
+                    <span class="action-text">Sales Analytics</span>
+                </a>
+                <a href="#" class="quick-action-btn">
+                    <span class="action-icon"><i class="fa-solid fa-gear"></i></span>
+                    <span class="action-text">Profile Settings</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
