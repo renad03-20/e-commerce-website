@@ -28,7 +28,7 @@
                     </div>
                     
                     <div class="item-quantity">
-                        <form method="post" action="{% url 'update_cart' item.id %}">
+                        <form method="post" action="{% url 'cart:update_cart' item.id %}">
                             {% csrf_token %}
                             <div class="quantity-controls">
                                 <button type="button" class="quantity-btn" onclick="decrementQuantity({{ item.id }})">-</button>
@@ -44,7 +44,7 @@
                     </div>
                     
                     <div class="item-actions">
-                        <form method="post" action="{% url 'remove_from_cart' item.id %}">
+                        <form method="post" action="{% url 'cart:remove_from_cart' item.id %}">
                             {% csrf_token %}
                             <button type="submit" class="remove-btn">
                                 <i class="fa-solid fa-trash"></i>
@@ -82,7 +82,7 @@
                             Continue Shopping
                         </a>
                         {% if user.is_authenticated %}
-                        <a href="{% url 'checkout' %}" class="checkout-btn">
+                        <a href="{% url 'cart:checkout' %}" class="checkout-btn">
                             Proceed to Checkout
                         </a>
                         {% else %}
