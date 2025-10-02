@@ -65,9 +65,17 @@ def update_cart_item(request, item_id, quantity):
 
 def get_cart_data(request):
     #! Get cart data for templates (total price, total quantity)
-    cart = get_or_create_cart(request)
-    return {
-        'total_price': cart.get_total_price(),
-        'total_quantity': cart.get_total_quantity(),
-        'items': cart.items.all()
-    }
+    try:
+        cart = get_or_create_cart(request)
+        return {
+            'total_price': cart.get_total_price(),
+            'total_quantity': cart.get_total_quantity(),
+            'items': cart.items.all()
+        }
+    except:
+        # return empty cart data
+        return{
+            'total_price': 0,
+            'total_quantity': 0,
+            'items': []
+        }
