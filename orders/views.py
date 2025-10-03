@@ -84,3 +84,71 @@ def order_create(request):
     }
     return render(request, 'orders/order_create.html', context)
         
+def order_created(request, order_id):
+    #! Order confirmation page
+    order = get_object_or_404(Order, id=order_id)
+    
+    #! Security check: ensure user can only see their own orders
+    if request.user.is_authenticated and order.user != request.user:
+        messages.error(request, "You don't have permission to view this order.")
+        return redirect('home')
+    
+    context = {
+        'order': order,
+    }
+    return render(request, 'orders/order_created.html', context)
+
+
+@login_required
+def order_list(request):
+    #! Display user's order history
+    orders = Order.objects.filter(user=request.user).order_by('-created')
+    
+    context = {
+        'orders': orders,
+    }
+    return render(request, 'orders/order_list.html', context)
+
+@login_required
+def order_detail(request, order_id):
+    #! Display order details
+    order = get_object_or_404(Order, id=order_id)
+    
+    #! Security check: ensure user can only see their own orders
+    if order.user != request.user:
+        messages.error(request, "You don't have permission to view this order.")
+        return redirect('order_list')
+    
+    context = {
+        'order': order,
+    }
+    return render(request, 'orders/order_detail.html', context)
+
+@login_required
+def artist_orders(request):
+    #! display orders for artist's artwork
+
+   # Get orders that contain artworks by this artist
+    orders = Order.objects.filter(
+        items__artwork__artist=request.user
+    ).distinct().order_by('-created')
+    
+    # Calculate artist statistics
+    total_sales = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True
+    ).count()
+    
+    total_revenue = sum(
+        item.get_cost() for item in OrderItem.objects.filter(
+            artwork__artist=request.user,
+            order__paid=True
+        )
+    )
+    
+    context = {
+        'orders': orders,
+        'total_sales': total_sales,
+        'total_revenue': total_revenue,
+    }
+    return render(request, 'orders/artist_orders.html', context)
