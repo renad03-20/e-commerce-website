@@ -8,7 +8,7 @@ from cart.utils import get_or_create_cart
 from artwork.models import Artwork
 
 @login_required
-def order_created(request):
+def order_create(request):
     #! create the order form the current cart
     cart = get_or_create_cart(request)
     cart_items = cart.items.all()
