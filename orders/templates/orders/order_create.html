@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/orders.css' %}">
+{% endblock %}
+
+{% block title %}Checkout - Art Gallery{% endblock %}
+
+{% block content %}
+<div class="checkout-container">
+    <div class="container">
+        <h1>Checkout</h1>
+        
+        <div class="checkout-content">
+            <!-- Order Summary -->
+            <div class="order-summary">
+                <h2>Order Summary</h2>
+                <div class="summary-items">
+                    {% for item in cart_items %}
+                    <div class="summary-item">
+                        <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork.title }}">
+                        <div class="item-details">
+                            <h4>{{ item.artwork.title }}</h4>
+                            <p>By {{ item.artwork.artist.username }}</p>
+                            <div class="item-meta">
+                                <span class="quantity">Qty: {{ item.quantity }}</span>
+                                <span class="price">${{ item.get_total_price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="summary-totals">
+                   <div class="total-row">
+                        <span>Subtotal ({{ cart.get_total_quantity }} items):</span>
+                        <span>${{ cart_total|floatformat:2 }}</span>
+                   </div>
+                    <div class="total-row">
+                        <span>Shipping:</span>
+                        <span>${{ shipping_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Tax ({{ tax_rate }}%):</span>
+                        <span>${{ tax|floatformat:2 }}</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Total:</span>
+                        <span>${{ grand_total|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkout Form -->
+            <div class="checkout-form-section">
+                <h2>Shipping Information</h2>
+                <form method="post" class="checkout-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="{{ form.first_name.id_for_label }}">First Name *</label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="error">{{ form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.last_name.id_for_label }}">Last Name *</label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="error">{{ form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.email.id_for_label }}">Email Address *</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="error">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.address.id_for_label }}">Street Address *</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="error">{{ form.address.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="{{ form.city.id_for_label }}">City *</label>
+                            {{ form.city }}
+                            {% if form.city.errors %}
+                                <div class="error">{{ form.city.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.postal_code.id_for_label }}">Postal Code *</label>
+                            {{ form.postal_code }}
+                            {% if form.postal_code.errors %}
+                                <div class="error">{{ form.postal_code.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.country.id_for_label }}">Country *</label>
+                        {{ form.country }}
+                        {% if form.country.errors %}
+                            <div class="error">{{ form.country.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-actions">
+                        <a href="{% url 'cart:cart_detail' %}" class="back-to-cart">← Back to Cart</a>
+                        <button type="submit" class="place-order-btn">Place Order</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
