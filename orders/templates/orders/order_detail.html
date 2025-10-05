@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/orders.css' %}">
+{% endblock %}
+
+{% block title %}Order #{{ order.id }} - Art Gallery{% endblock %}
+
+{% block content %}
+<div class="order-detail">
+    <div class="container">
+        <div class="order-detail-header">
+            <h1>Order #{{ order.id }}</h1>
+            <div class="order-meta">
+                <span class="order-date">Placed on {{ order.created|date:"F d, Y" }}</span>
+                <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+            </div>
+        </div>
+        
+        <div class="order-detail-content">
+            <div class="order-items">
+                <h2>Order Items</h2>
+                {% for item in order.items.all %}
+                <div class="order-item-detail">
+                    <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}">
+                    <div class="item-details">
+                        <h3>{{ item.artwork_title }}</h3>
+                        <p class="artist">By {{ item.artist_name }}</p>
+                        <div class="item-meta">
+                            <span>Quantity: {{ item.quantity }}</span>
+                            <span>Price: ${{ item.price }} each</span>
+                        </div>
+                    </div>
+                    <div class="item-total">${{ item.get_cost }}</div>
+                </div>
+                {% endfor %}
+                
+                <div class="order-totals">
+                    <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span>${{ order.get_total_cost }}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Shipping:</span>
+                        <span>$10.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Tax:</span>
+                        <span>${{ order.get_total_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Total:</span>
+                        <span>${{ order.get_total_cost|add:10|add:order.get_total_cost|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="order-info">
+                <div class="info-section">
+                    <h3>Shipping Address</h3>
+                    <div class="address-info">
+                        <p><strong>{{ order.first_name }} {{ order.last_name }}</strong></p>
+                        <p>{{ order.address }}</p>
+                        <p>{{ order.city }}, {{ order.postal_code }}</p>
+                        <p>{{ order.country }}</p>
+                        <p>{{ order.email }}</p>
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <h3>Order Status</h3>
+                    <div class="status-info">
+                        <p><strong>Current Status:</strong> {{ order.get_status_display }}</p>
+                        <p><strong>Payment Status:</strong> {% if order.paid %}Paid{% else %}Pending{% endif %}</p>
+                        <p><strong>Order Date:</strong> {{ order.created|date:"F d, Y" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="order-actions">
+            <a href="{% url 'order_list' %}" class="btn btn-secondary">← Back to Orders</a>
+            <a href="{% url 'artwork_list' %}" class="btn btn-primary">Continue Shopping</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
