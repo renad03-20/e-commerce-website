@@ -82,11 +82,11 @@
                             Continue Shopping
                         </a>
                         {% if user.is_authenticated %}
-                        <a href="{% url 'cart:checkout' %}" class="checkout-btn">
+                        <a href="{% url 'order_create' %}" class="checkout-btn">
                             Proceed to Checkout
                         </a>
                         {% else %}
-                        <a href="{% url 'login' %}?next={% url 'cart_detail' %}" class="checkout-btn">
+                        <a href="{% url 'login' %}?next={% url 'orders:order_create' %}" class="checkout-btn">
                             Login to Checkout
                         </a>
                         {% endif %}
