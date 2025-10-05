@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/orders.css' %}">
+{% endblock %}
+
+{% block title %}Order Confirmed - Art Gallery{% endblock %}
+
+{% block content %}
+<div class="order-confirmation">
+    <div class="container">
+        <div class="confirmation-content">
+            <div class="confirmation-icon">✅</div>
+            <h1>Order Confirmed!</h1>
+            <p class="order-number">Order #{{ order.id }}</p>
+            <p class="confirmation-message">
+                Thank you for your purchase! We've sent a confirmation email to <strong>{{ order.email }}</strong>.
+            </p>
+            
+            <div class="order-details">
+                <div class="detail-section">
+                    <h3>Order Summary</h3>
+                    {% for item in order.items.all %}
+                    <div class="order-item">
+                        <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork.title }}">
+                        <div class="item-info">
+                            <h4>{{ item.artwork_title }}</h4>
+                            <p>By {{ item.artist_name }}</p>
+                            <div class="item-meta">
+                                <span>Qty: {{ item.quantity }}</span>
+                                <span>Price: ${{ item.price }}</span>
+                            </div>
+                        </div>
+                        <div class="item-total">${{ item.get_cost }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Shipping Information</h3>
+                    <div class="shipping-info">
+                        <p><strong>{{ order.first_name }} {{ order.last_name }}</strong></p>
+                        <p>{{ order.address }}</p>
+                        <p>{{ order.city }}, {{ order.postal_code }}</p>
+                        <p>{{ order.country }}</p>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h3>Order Total</h3>
+                    <div class="order-total">
+                        <strong>${{ order.get_total_cost }}</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="confirmation-actions">
+                <a href="{% url 'order_list' %}" class="btn btn-primary">View Order History</a>
+                <a href="{% url 'artwork_list' %}" class="btn btn-secondary">Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
