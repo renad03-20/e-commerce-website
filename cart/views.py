@@ -65,11 +65,10 @@ def update_cart_view(request, item_id):
 
 @login_required
 def checkout(request):
-    #! Placeholder for checkout view - will connect to orders app later
+    #! redirect to order creation
     cart = get_or_create_cart(request)
     if cart.get_total_quantity() == 0:
         messages.error(request, "Your cart is empty.")
         return redirect('cart:cart_detail')
     
-    messages.info(request, "Checkout functionality will be implemented next.")
     return redirect('cart:cart_detail')
