@@ -39,7 +39,7 @@
                     {% else %}
                     <span class="discount">${{ artwork.price }}</span>
                     {% endif %}
-                    <a href="{% url 'add_to_cart' artwork.id %}" class="add-to-cart">
+                    <a href="{% url 'cart:add_to_cart' artwork.id %}" class="add-to-cart">
                         <i class="fa-solid fa-cart-plus"></i>
                     </a>
                 </div>
