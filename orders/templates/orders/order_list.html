@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/orders.css' %}">
+{% endblock %}
+
+{% block title %}Order History - Art Gallery{% endblock %}
+
+{% block content %}
+<div class="order-history">
+    <div class="container">
+        <h1>Order History</h1>
+        
+        {% if orders %}
+        <div class="orders-list">
+            {% for order in orders %}
+            <div class="order-card">
+                <div class="order-header">
+                    <div class="order-info">
+                        <h3>Order #{{ order.id }}</h3>
+                        <p class="order-date">{{ order.created|date:"F d, Y" }}</p>
+                    </div>
+                    <div class="order-status">
+                        <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+                        <span class="order-total">${{ order.get_total_cost }}</span>
+                    </div>
+                </div>
+                
+                <div class="order-items-preview">
+                    {% for item in order.items.all|slice:":3" %}
+                    <div class="preview-item">
+                        <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}">
+                        <span class="item-title">{{ item.artwork_title }}</span>
+                        <span class="item-quantity">×{{ item.quantity }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if order.items.count > 3 %}
+                    <div class="more-items">+{{ order.items.count|add:"-3" }} more items</div>
+                    {% endif %}
+                </div>
+                
+                <div class="order-actions">
+                    <a href="{% url 'order_detail' order.id %}" class="btn-view-order">View Details</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-orders">
+            <div class="empty-icon">📦</div>
+            <h2>No Orders Yet</h2>
+            <p>You haven't placed any orders yet. Start shopping to see your order history here.</p>
+            <a href="{% url 'artwork_list' %}" class="btn btn-primary">Browse Artworks</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
