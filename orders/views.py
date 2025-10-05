@@ -68,10 +68,19 @@ def order_create(request):
         form = OrderCreateForm(initial=initial_data)
 
     #! calculate totals for display 
-    cart_total = cart.get_total_price()
-    shipping_cost = 10.00  #? Fixed shipping cost for now
-    tax = cart_total * 0.08  #? Example tax calculation (8%)
-    grand_total = cart_total + shipping_cost + tax
+    try:
+        cart_total = cart.get_total_price()
+        shipping_cost = 10.00
+        tax_rate = 0.08
+        tax = cart_total * tax_rate
+        grand_total = cart_total + shipping_cost + tax
+    except Exception as e:
+        # Fallback calculations if anything goes wrong
+        cart_total = 0
+        shipping_cost = 0
+        tax = 0
+        grand_total = 0
+        print(f"Calculation error: {e}")
 
     context = {
         'form': form,
@@ -79,7 +88,8 @@ def order_create(request):
         'cart_items': cart_items,
         'cart_total': cart_total,
         'shipping_cost': shipping_cost,
-        'tax':tax,
+        'tax': tax,
+        'tax_rate': tax_rate * 100,  #? Convert to percentage for display
         'grand_total': grand_total
     }
     return render(request, 'orders/order_create.html', context)
