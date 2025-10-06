@@ -32,7 +32,7 @@
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fa-solid fa-chart-simple"></i></div>
                     <div class="stat-info">
-                        <h3>${{ total_revenue }}</h3>
+                        <h3>${{ total_revenue|floatformat:2 }}</h3>
                         <p>Total Revenue</p>
                     </div>
                 </div>
@@ -152,7 +152,7 @@
                     </div>
                     <div class="sales-stat">
                         <span class="stat-label">Orders This Month:</span>
-                        <span class="stat-value">{{ total_sales }}</span>
+                        <span class="stat-value">{{ orders_this_month }}</span>
                     </div>
                     <div class="sales-stat">
                         <span class="stat-label">Total Revenue:</span>
