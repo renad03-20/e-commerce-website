@@ -4,7 +4,10 @@ from django.contrib import messages
 from .models import Artwork, Category, Tag
 from .forms import ArtworkForm
 from cart.models import CartItem
+from orders.models import OrderItem
 from django.db.models import Sum, Count
+from django.utils import timezone
+from django.db.models import Count
 
 def is_artist(user):
     return user.groups.filter(name='Artists').exists() or user.is_superuser
@@ -118,13 +121,33 @@ def artwork_delete(request, pk):
 def artist_dashboard(request):
     #! Get artist's artworks
     artworks = Artwork.objects.filter(artist=request.user).order_by('-created_at')
+
+    artist_order_items = OrderItem.objects.filter(artwork__artist=request.user)
     
     #! Calculate statistics
     total_artworks = artworks.count()
     
-    #! For now, we'll use placeholder data for sales (we'll implement orders later)
-    total_sales = 0  #? This will come from orders app later
-    total_revenue = 0  #? This will come from orders app later
+    #! Calculate real sales data
+    total_sales = artist_order_items.aggregate(total_sold=Sum('quantity'))['total_sold'] or 0
+    total_revenue = sum(item.get_cost() for item in artist_order_items)
+
+    #! Get paid orders only for revenue calculation
+    paid_order_items = artist_order_items.filter(order__paid=True)
+    actual_revenue = sum(item.get_cost() for item in paid_order_items)
+    
+    #! Best selling artwork
+    best_selling = artist_order_items.values('artwork__title').annotate(
+        total_sold=Sum('quantity')
+    ).order_by('-total_sold').first()
+
+    best_selling_artwork = None
+    if best_selling:
+        best_selling_artwork = Artwork.objects.filter(
+            title=best_selling['artwork__title'],
+            artist=request.user
+        ).first()
+    
+
     
     #! Calculate revenue from artworks (placeholder - will be replaced with actual order data)
     revenue_from_artworks = artworks.aggregate(total=Sum('price'))['total'] or 0
@@ -132,16 +155,22 @@ def artist_dashboard(request):
     #! Get recent artworks (last 5)
     recent_artworks = artworks[:5]
     
-    # !Best selling artwork (placeholder)
-    best_selling_artwork = artworks.first()  #? Will be replaced with actual sales data
+    #! orders this month
+    this_month = timezone.now().month
+    orders_this_month = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__created__month=this_month
+    ).count()
     
     context = {
         'artworks': artworks,
         'recent_artworks': recent_artworks,
-        'total_artworks': total_artworks,
+        'total_artworks': artworks.count(),
         'total_sales': total_sales,
-        'total_revenue': total_revenue,
-        'revenue_from_artworks': revenue_from_artworks,
+        'total_revenue': actual_revenue,
+        'revenue_from_artworks': total_revenue,
         'best_selling_artwork': best_selling_artwork,
+        'orders_this_month': orders_this_month,
+        'artist_order_items': artist_order_items,
     }
     return render(request, 'products/artist_dashboard.html', context)
