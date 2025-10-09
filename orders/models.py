@@ -24,8 +24,8 @@ class Order(models.Model):
     paid = models.BooleanField(default=False)
 
     #! payment information 
-    payment_method = models.CharField(max_length=50, blank=True)
-    payment_id = models.CharField(max_length=100, blank=True)
+    stripe_payment_intent_id = models.CharField(max_length=100, blank=True)
+    stripe_charge_id = models.CharField(max_length=100, blank=True)
 
     #! order status
     STATUS_CHOICES = [
