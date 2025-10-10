@@ -48,16 +48,20 @@ def order_create(request):
                     quantity=cart_item.quantity
                 )
 
-                #! update artwork stock
-                artwork = cart_item.artwork
-                artwork.stock -= cart_item.quantity
-                artwork.save()
+            #? will not update stock or clear cart untill payment is completed
+            #     #! update artwork stock
+            #     artwork = cart_item.artwork
+            #     artwork.stock -= cart_item.quantity
+            #     artwork.save()
 
-            #! clear the cart 
-            cart.items.all().delete()
+            # #! clear the cart 
+            # cart.items.all().delete()
 
-            messages.success(request, f'Order #{order.id} created successfully')
-            return redirect('order_created', order_id=order.id)
+            #! store order ID in session for payment process
+            request.session['order_id'] = order.id
+
+            messages.success(request, f'Order #{order.id} created! please complete payment.')
+            return redirect('payment_process', order_id=order.id)
         
     else:
         #! Pre-fill form with user data if available
