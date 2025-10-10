@@ -6,6 +6,9 @@ from .models import Order, OrderItem
 from .forms import OrderCreateForm
 from cart.utils import get_or_create_cart
 from artwork.models import Artwork
+import stripe
+from django.conf import settings
+from django.urls import reverse
 
 @login_required
 def order_create(request):
@@ -162,3 +165,90 @@ def artist_orders(request):
         'total_revenue': total_revenue,
     }
     return render(request, 'orders/artist_orders.html', context)
+
+def payment_process(request):
+    """
+    Handle the payment process with Stripe
+    """
+    # Set Stripe API key
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    
+    order_id = request.session.get('order_id')
+    order = get_object_or_404(Order, id=order_id)
+    
+    if request.method == 'POST':
+        success_url = request.build_absolute_uri(reverse('payment:completed'))
+        cancel_url = request.build_absolute_uri(reverse('payment:canceled'))
+        
+        # Stripe checkout session data
+        session_data = {
+            'mode': 'payment',
+            'client_reference_id': order.id,
+            'success_url': success_url,
+            'cancel_url': cancel_url,
+            'line_items': []
+        }
+        
+        # Add order items to Stripe
+        for item in order.items.all():
+            session_data['line_items'].append({
+                'price_data': {
+                    'unit_amount': int(item.price * 100),  # Stripe expects cents
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': item.artwork_title,
+                    },
+                },
+                'quantity': item.quantity,
+            })
+        
+        # Add shipping cost as a separate line item
+        session_data['line_items'].append({
+            'price_data': {
+                'unit_amount': 1000,  # $10.00 in cents
+                'currency': 'usd',
+                'product_data': {
+                    'name': 'Shipping',
+                },
+            },
+            'quantity': 1,
+        })
+        
+        # Create Stripe checkout session
+        session = stripe.checkout.Session.create(**session_data)
+        
+        # Redirect to Stripe checkout
+        return redirect(session.url, code=303)
+    
+    else:
+        return render(request, 'orders/payment/process.html', {'order': order})
+
+def payment_completed(request):
+    """
+    Handle successful payment
+    """
+    order_id = request.session.get('order_id')
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Mark order as paid
+    order.paid = True
+    order.status = 'processing'
+    order.save()
+    
+    # Clear the order ID from session
+    if 'order_id' in request.session:
+        del request.session['order_id']
+    
+    messages.success(request, f'Payment completed successfully! Order #{order.id} is being processed.')
+    return render(request, 'orders/payment/completed.html', {'order': order})
+
+def payment_canceled(request):
+    """
+    Handle cancelled payment
+    """
+    order_id = request.session.get('order_id')
+    order = get_object_or_404(Order, id=order_id)
+    
+    messages.warning(request, 'Payment was cancelled. You can try again.')
+    return render(request, 'orders/payment/canceled.html', {'order': order})
+    
