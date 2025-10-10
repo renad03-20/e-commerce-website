@@ -7,4 +7,9 @@ urlpatterns = [
     path('history/', views.order_list, name='order_list'),
     path('<int:order_id>/', views.order_detail, name='order_detail'),
     path('artist/orders/', views.artist_orders, name='artist_orders'),
+    
+    # Payment URLs
+    path('payment/process/', views.payment_process, name='payment_process'),
+    path('payment/completed/', views.payment_completed, name='payment_completed'),
+    path('payment/canceled/', views.payment_canceled, name='payment_canceled'),
 ]
