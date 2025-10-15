@@ -21,7 +21,7 @@
     <div class="container">
         <h1>Featured Products</h1>
         <div class="wrapper">
-            {% for artwork in featured_artworks %}
+            {% for artwork in featured_artwork %}
             <div class="card">
                 <div class="card-img">
                     <a href="{% url 'artwork_detail' artwork.pk %}">
