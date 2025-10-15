@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/orders.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="payment-container">
+    <div class="container">
+        <h1>Complete Your Payment</h1>
+        
+        <div class="payment-content">
+            <div class="order-summary">
+                <h2>Order Summary</h2>
+                <div class="summary-items">
+                    {% for item in order.items.all %}
+                    <div class="summary-item">
+                        <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}">
+                        <div class="item-details">
+                            <h4>{{ item.artwork_title }}</h4>
+                            <p>By {{ item.artist_name }}</p>
+                            <div class="item-meta">
+                                <span class="quantity">Qty: {{ item.quantity }}</span>
+                                <span class="price">${{ item.price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="summary-totals">
+                    <div class="total-row">
+                        <span>Subtotal:</span>
+                        <span>${{ order.get_total_cost }}</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Shipping:</span>
+                        <span>$10.00</span>
+                    </div>
+                    <div class="total-row grand-total">
+                        <span>Total:</span>
+                        <span>${{ order.get_total_cost|add:10|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-section">
+                <h2>Payment Method</h2>
+                <p>You will be redirected to Stripe to complete your payment securely.</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="stripe-pay-btn">
+                        <i class="fa-solid fa-lock"></i>
+                        Pay with Stripe
+                    </button>
+                </form>
+                
+                <div class="payment-security">
+                    <p><i class="fa-solid fa-shield-alt"></i> Secure payment processed by Stripe</p>
+                    <div class="test-card-info">
+                        <h4>Test Card for Development:</h4>
+                        <p><strong>Card:</strong> 4242 4242 4242 4242</p>
+                        <p><strong>Expiry:</strong> Any future date</p>
+                        <p><strong>CVC:</strong> Any 3 digits</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

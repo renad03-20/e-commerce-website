@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Successful - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/orders.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="payment-success">
+    <div class="container">
+        <div class="success-content">
+            <div class="success-icon">
+                <i class="fa-solid fa-check-circle"></i>
+            </div>
+            <h1>Payment Successful!</h1>
+            <p class="order-number">Order #{{ order.id }}</p>
+            <p class="success-message">
+                Thank you for your purchase! Your payment has been processed successfully.
+            </p>
+            
+            <div class="success-actions">
+                <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-primary">View Order Details</a>
+                <a href="{% url 'artwork_list' %}" class="btn btn-secondary">Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Cancelled - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/orders.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="payment-cancelled">
+    <div class="container">
+        <div class="cancelled-content">
+            <div class="cancelled-icon">
+                <i class="fa-solid fa-xmark-circle"></i>
+            </div>
+            <h1>Payment Cancelled</h1>
+            <p class="cancelled-message">
+                Your payment was cancelled. No charges have been made to your account.
+            </p>
+            
+            <div class="cancelled-actions">
+                <a href="{% url 'orders:payment_process' %}" class="btn btn-primary">Try Payment Again</a>
+                <a href="{% url 'cart_detail' %}" class="btn btn-secondary">Return to Cart</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
