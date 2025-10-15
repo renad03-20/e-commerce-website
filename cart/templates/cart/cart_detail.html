@@ -68,8 +68,8 @@
                             <span>$10.00</span>
                         </div>
                         <div class="summary-row">
-                            <span>Tax</span>
-                            <span>${{ cart_total_price|floatformat:2 }}</span>
+                            <span>Tax ({{ tax_rate|floatformat:1 }}%)</span>
+                            <span>${{ tax|floatformat:2 }}</span>
                         </div>
                         <div class="summary-row total">
                             <span>Total</span>
