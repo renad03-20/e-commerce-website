@@ -15,6 +15,12 @@
     <!-- static CSS -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
 
+    <!-- favicon -->
+    <head>
+        <title>Artsy - Your Art Marketplace</title>
+        <link rel="icon" type="image/x-icon" href="{% static 'images/favicon_io/favicon.ico' %}">
+    </head>
+
     {% block extra_css %}{% endblock %}
 
     <title>{% block title %}Art Gallery{% endblock %}</title>
@@ -26,7 +32,7 @@
             <div class="header-container">
                 <nav>
                     <a href="{% url 'home' %}">
-                        <img src="{% static 'img/logo.png' %}" class="logo" alt="Art Gallery Logo">
+                        <img src="{% static 'img/artsyLogo.png' %}" class="logo" alt="Art Gallery Logo">
                     </a>
                     <ul>
                         <li><a href="{% url 'home' %}">Home</a></li>
