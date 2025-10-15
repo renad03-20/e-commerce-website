@@ -9,11 +9,11 @@ from .forms import CustomUserCreationForm
 def home(request):
     #! getting tandom artwork to feature in the home page
     featured_artwork = Artwork.objects.filter(stock__gt=0).order_by('?')[:4]
-    Categories = Category.objects.all()[:4] #! getting four categories for dispaly
+    categories = Category.objects.all()[:4] #! Corrected variable name
 
     context = {
         'featured_artwork': featured_artwork,
-        'Categories': Categories,
+        'categories': categories, #! Use lowercase variable in the context
     }
     return render(request, "pages/home.html", context)
 
