@@ -36,11 +36,11 @@ def order_create(request):
             #! Associate order with user if logged in
             if request.user.is_authenticated:
                 order.user = request.user
-
             #! save the order
             order.save()
 
             for cart_item in cart_items:
+                print(f"DEBUG: Processing cart item: {cart_item.artwork.title} x{cart_item.quantity}") 
                 OrderItem.objects.create(
                     order=order,
                     artwork=cart_item.artwork,
@@ -48,20 +48,27 @@ def order_create(request):
                     quantity=cart_item.quantity
                 )
 
-            #? will not update stock or clear cart untill payment is completed
-            #     #! update artwork stock
-            #     artwork = cart_item.artwork
-            #     artwork.stock -= cart_item.quantity
-            #     artwork.save()
+                print(f'debug: order item created for {cart_item.artwork.title}')
 
-            # #! clear the cart 
+            #!  DO NOT update stock or clear cart here!
+            #! ONLY after successful payment
+            # artwork = cart_item.artwork
+            # print(f'debug before stock update {artwork.title}: stock: {artwork.stock}')
+            # artwork.stock -= cart_item.quantity
+            # artwork.save()
+            # print(f'debug after stock update {artwork.title}: stock: {artwork.stock}')
+
+            #! DO NOT clear cart here!
+            #! ONLY after successful payment:
+            # print(f'debug before clearing cart {cart.items.count()} items')
             # cart.items.all().delete()
+            # print(f'debug after clearing cart  {cart.items.count()} items')
 
             #! store order ID in session for payment process
             request.session['order_id'] = order.id
 
-            messages.success(request, f'Order #{order.id} created! please complete payment.')
-            return redirect('payment_process', order_id=order.id)
+            messages.success(request, f'Order #{order.id} created! Please complete payment.')
+            return redirect('payment_process')
         
     else:
         #! Pre-fill form with user data if available
@@ -75,18 +82,20 @@ def order_create(request):
         form = OrderCreateForm(initial=initial_data)
 
     #! calculate totals for display 
+    from decimal import Decimal
+
     try:
-        cart_total = cart.get_total_price()
-        shipping_cost = 10.00
-        tax_rate = 0.08
+        cart_total = cart.get_total_price() or Decimal('0')
+        shipping_cost = Decimal('10.00')
+        tax_rate = Decimal('0.08')  # 8%
         tax = cart_total * tax_rate
         grand_total = cart_total + shipping_cost + tax
     except Exception as e:
-        # Fallback calculations if anything goes wrong
-        cart_total = 0
-        shipping_cost = 0
-        tax = 0
-        grand_total = 0
+        cart_total = Decimal('0')
+        shipping_cost = Decimal('0')
+        tax_rate = Decimal('0.08')
+        tax = Decimal('0')
+        grand_total = Decimal('0')
         print(f"Calculation error: {e}")
 
     context = {
@@ -96,7 +105,7 @@ def order_create(request):
         'cart_total': cart_total,
         'shipping_cost': shipping_cost,
         'tax': tax,
-        'tax_rate': tax_rate * 100,  #? Convert to percentage for display
+        'tax_rate': tax_rate * Decimal('100'),  # Convert 0.08 to 8.0 for display
         'grand_total': grand_total
     }
     return render(request, 'orders/order_create.html', context)
@@ -118,11 +127,17 @@ def order_created(request, order_id):
 
 @login_required
 def order_list(request):
+    print(f"DEBUG: order list called for user: {request.user} ")
     #! Display user's order history
-    orders = Order.objects.filter(user=request.user).order_by('-created')
+    orders1 = Order.objects.filter(user=request.user).order_by('-created')
+    orders2 = Order.objects.all().order_by('-created')
+    
+    print(f"DEBUG: Orders found (user filter): {orders1.count()}")  # ADD THIS
+    print(f"DEBUG: All orders: {orders2.count()}")
     
     context = {
-        'orders': orders,
+        'orders1': orders1,
+        'orders2': orders2
     }
     return render(request, 'orders/order_list.html', context)
 
@@ -181,8 +196,8 @@ def payment_process(request):
     order = get_object_or_404(Order, id=order_id)
     
     if request.method == 'POST':
-        success_url = request.build_absolute_uri(reverse('payment:completed'))
-        cancel_url = request.build_absolute_uri(reverse('payment:canceled'))
+        success_url = request.build_absolute_uri(reverse('payment_completed'))
+        cancel_url = request.build_absolute_uri(reverse('payment_canceled'))
         
         # Stripe checkout session data
         session_data = {
