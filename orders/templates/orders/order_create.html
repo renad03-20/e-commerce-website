@@ -33,16 +33,16 @@
                 </div>
                 
                 <div class="summary-totals">
-                   <div class="total-row">
+                    <div class="total-row">
                         <span>Subtotal ({{ cart.get_total_quantity }} items):</span>
                         <span>${{ cart_total|floatformat:2 }}</span>
-                   </div>
+                    </div>
                     <div class="total-row">
                         <span>Shipping:</span>
                         <span>${{ shipping_cost|floatformat:2 }}</span>
                     </div>
                     <div class="total-row">
-                        <span>Tax ({{ tax_rate }}%):</span>
+                        <span>Tax ({{ tax_rate|floatformat:1 }}%):</span>
                         <span>${{ tax|floatformat:2 }}</span>
                     </div>
                     <div class="total-row grand-total">
