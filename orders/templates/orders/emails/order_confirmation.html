@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; text-align: center; }
+        .order-details { background: #f8f9fa; padding: 20px; margin: 20px 0; }
+        .artwork-item { display: flex; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #ddd; }
+        .artwork-image { width: 80px; height: 80px; object-fit: cover; margin-right: 15px; }
+        .footer { text-align: center; margin-top: 30px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Order Confirmed!</h1>
+            <p>Thank you for your purchase from Art Gallery</p>
+        </div>
+        
+        <div class="order-info">
+            <h2>Order #{{ order.id }}</h2>
+            <p><strong>Order Date:</strong> {{ order.created|date:"F j, Y" }}</p>
+            <p><strong>Total Amount:</strong> ${{ order.get_total_cost }}</p>
+        </div>
+        
+        <div class="order-details">
+            <h3>Order Items</h3>
+            {% for item in order.items.all %}
+            <div class="artwork-item">
+                <img src="{{ site_url }}{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}" class="artwork-image">
+                <div>
+                    <h4>{{ item.artwork_title }}</h4>
+                    <p>By {{ item.artist_name }}</p>
+                    <p>Quantity: {{ item.quantity }} × ${{ item.price }}</p>
+                    <p><strong>Item Total: ${{ item.get_cost }}</strong></p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="shipping-info">
+            <h3>Shipping Address</h3>
+            <p>{{ order.first_name }} {{ order.last_name }}</p>
+            <p>{{ order.address }}</p>
+            <p>{{ order.city }}, {{ order.postal_code }}</p>
+            <p>{{ order.country }}</p>
+        </div>
+        
+        <div class="footer">
+            <p>If you have any questions, please contact us at XXXXXX</p>
+            <p>© 2025 Art Gallery. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
