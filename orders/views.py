@@ -247,12 +247,48 @@ def payment_completed(request):
     Handle successful payment
     """
     order_id = request.session.get('order_id')
+    if not order_id:
+        messages.error(request, "no order found.")
+        return redirect('home')
+    
     order = get_object_or_404(Order, id=order_id)
     
     # Mark order as paid
     order.paid = True
     order.status = 'processing'
     order.save()
+
+    # Update stock and clear cart
+    try:
+        from cart.utils import get_or_create_cart
+        from artwork.models import Artwork
+        
+        # Update artwork stock
+        for item in order.items.all():
+            artwork = Artwork.objects.get(id=item.artwork.id)
+            artwork.stock -= item.quantity
+            artwork.save()
+        
+        # Clear the cart
+        cart = get_or_create_cart(request)
+        cart.items.all().delete()
+        
+    except Exception as e:
+        print(f"DEBUG: Error in payment completion cleanup: {e}")
+
+    # send emial notifications
+    try:
+        from .emails import send_artist_order_notification, send_order_confirmation
+
+        #send confirmation to customer
+        send_order_confirmation(order)
+
+        #send notifications to artist
+        for item in order.itmes.all():
+            send_artist_order_notification(item)
+
+    except Exception as e:
+        print(f'email sending failed: {e}')
     
     # Clear the order ID from session
     if 'order_id' in request.session:
