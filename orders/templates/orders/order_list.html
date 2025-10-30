@@ -11,14 +11,18 @@
 <div class="order-history">
     <div class="container">
         <h1>Order History</h1>
-        
-        {% if orders %}
+        {% if order %}
+        {% comment %} <div class="debug-info" style="background: yellow; padding: 10px;">
+            <p>Debug: User = {{ user.username }}</p>
+            <p>Debug: Orders count = {{ orders.count }}</p>
+            <p>Debug: All orders count = {{ all_orders.count }}</p>
+        </div> {% endcomment %}
         <div class="orders-list">
             {% for order in orders %}
             <div class="order-card">
                 <div class="order-header">
                     <div class="order-info">
-                        <h3>Order #{{ order.id }}</h3>
+                        <h3>Order #{{ order.order_number }}</h3>
                         <p class="order-date">{{ order.created|date:"F d, Y" }}</p>
                     </div>
                     <div class="order-status">
@@ -41,7 +45,7 @@
                 </div>
                 
                 <div class="order-actions">
-                    <a href="{% url 'order_detail' order.id %}" class="btn-view-order">View Details</a>
+                    <a href="{% url 'order_detail' order.order_number %}" class="btn-view-order">View Details</a>
                 </div>
             </div>
             {% endfor %}

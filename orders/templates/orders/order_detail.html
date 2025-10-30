@@ -5,13 +5,13 @@
 <link rel="stylesheet" href="{% static 'css/orders.css' %}">
 {% endblock %}
 
-{% block title %}Order #{{ order.id }} - Art Gallery{% endblock %}
+{% block title %}Order #{{ order.order_number}} - Art Gallery{% endblock %}
 
 {% block content %}
 <div class="order-detail">
     <div class="container">
         <div class="order-detail-header">
-            <h1>Order #{{ order.id }}</h1>
+            <h1>Order #{{ order.order_number }}</h1>
             <div class="order-meta">
                 <span class="order-date">Placed on {{ order.created|date:"F d, Y" }}</span>
                 <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
