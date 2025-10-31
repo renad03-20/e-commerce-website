@@ -1,10 +1,14 @@
 from django.db import models
 from django.conf import settings
 from artwork.models import Artwork
+import uuid
 
 class Order(models.Model):
     #! user information for logged in users 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+
+    #! unique order number
+    order_number = models.CharField(max_length=20, unique=True, blank=True)
 
     #! customer information
     first_name = models.CharField(max_length=50)
@@ -40,6 +44,18 @@ class Order(models.Model):
     
     class Meta:
         ordering = ['-created']
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            self.order_number = self.generate_order_number()
+        super().save(*args, **kwargs)
+
+    def generate_order_number(self):
+        """Generate mixed order number"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%y%m%d")
+        random_part = uuid.uuid4().hex[:6].upper()
+        return f"ART-{timestamp}-{random_part}"
 
     def __str__(self):
         return f"Order {self.id} - {self.first_name} {self.last_name}"
