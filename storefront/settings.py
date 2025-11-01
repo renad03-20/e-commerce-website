@@ -151,3 +151,16 @@ LOGIN_URL = 'login'  # URL to redirect to for login
 # Media files (Uploaded images)
 MEDIA_URL = '/media/'  # URL prefix for media files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Path where media is stored
+
+# Email settings (for development ueses)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Prints to console
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 25
+
+# email settings for deployment 
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'myEmail'
+# EMAIL_HOST_PASSWORD = 'password'
