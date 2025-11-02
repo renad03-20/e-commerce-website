@@ -17,11 +17,13 @@
             <h1>Payment Cancelled</h1>
             <p class="cancelled-message">
                 Your payment was cancelled. No charges have been made to your account.
+                Your order is still saved and you can complete payment later.
             </p>
             
             <div class="cancelled-actions">
-                <a href="{% url 'orders:payment_process' %}" class="btn btn-primary">Try Payment Again</a>
-                <a href="{% url 'cart_detail' %}" class="btn btn-secondary">Return to Cart</a>
+                <a href="{% url 'payment_process' %}" class="btn btn-primary">Try Payment Again</a>
+                <a href="{% url 'cart:cart_detail' %}" class="btn btn-secondary">Return to Cart</a>
+                <a href="{% url 'order_list' %}" class="btn btn-outline">View My Orders</a>
             </div>
         </div>
     </div>
