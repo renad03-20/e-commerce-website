@@ -1,0 +1,130 @@
+{% extends 'accounts/base.html' %}
+
+{% block accounts_content %}
+<div class="profile-header">
+    <h1>Profile Overview</h1>
+    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">Edit Profile</a>
+</div>
+
+<div class="profile-content">
+    <!-- Personal Info Card -->
+    <div class="profile-card">
+        <h2><i class="fa-solid fa-user"></i> Personal Information</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Username:</label>
+                <span>{{ user.username }}</span>
+            </div>
+            <div class="info-item">
+                <label>Email:</label>
+                <span>{{ user.email }}</span>
+            </div>
+            <div class="info-item">
+                <label>Full Name:</label>
+                <span>{{ user.first_name }} {{ user.last_name }}</span>
+            </div>
+            <div class="info-item">
+                <label>Phone:</label>
+                <span>{{ profile.phone_number|default:"Not set" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Date of Birth:</label>
+                <span>{{ profile.date_of_birth|date:"M d, Y"|default:"Not set" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Member Since:</label>
+                <span>{{ user.date_joined|date:"M d, Y" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+                <h3>{{ recent_orders.count }}</h3>
+                <p>Recent Orders</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🏠</div>
+            <div class="stat-info">
+                <h3>{{ addresses.count }}</h3>
+                <p>Saved Addresses</p>
+            </div>
+        </div>
+        {% if user.groups.filter.name == 'Artists' %}
+        <div class="stat-card">
+            <div class="stat-icon">🎨</div>
+            <div class="stat-info">
+                <h3>{{ user.artworks.count }}</h3>
+                <p>My Artworks</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="profile-card">
+        <div class="card-header">
+            <h2><i class="fa-solid fa-receipt"></i> Recent Orders</h2>
+            <a href="{% url 'accounts:order_history' %}" class="view-all">View All</a>
+        </div>
+        
+        {% if recent_orders %}
+        <div class="orders-list">
+            {% for order in recent_orders %}
+            <div class="order-item">
+                <div class="order-info">
+                    <h4>Order #{{ order.order_number }}</h4>
+                    <p class="order-date">{{ order.created|date:"M d, Y" }}</p>
+                    <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+                </div>
+                <div class="order-total">${{ order.get_total_cost }}</div>
+                <div class="order-actions">
+                    <a href="{% url 'orders:order_detail' order.order_number %}" class="btn-view">View Details</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No orders yet. <a href="{% url 'artwork_list' %}">Start shopping!</a></p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Addresses -->
+    <div class="profile-card">
+        <div class="card-header">
+            <h2><i class="fa-solid fa-address-book"></i> Saved Addresses</h2>
+            <a href="{% url 'accounts:address_list' %}" class="view-all">Manage Addresses</a>
+        </div>
+        
+        {% if addresses %}
+        <div class="addresses-grid">
+            {% for address in addresses|slice:":2" %}
+            <div class="address-card {% if address.is_default %}default-address{% endif %}">
+                <div class="address-header">
+                    <h4>{{ address.get_address_type_display }} Address</h4>
+                    {% if address.is_default %}<span class="default-badge">Default</span>{% endif %}
+                </div>
+                <div class="address-details">
+                    <p><strong>{{ address.first_name }} {{ address.last_name }}</strong></p>
+                    <p>{{ address.address_line_1 }}</p>
+                    {% if address.address_line_2 %}<p>{{ address.address_line_2 }}</p>{% endif %}
+                    <p>{{ address.city }}, {{ address.state }} {{ address.postal_code }}</p>
+                    <p>{{ address.country.name }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No addresses saved. <a href="{% url 'accounts:address_create' %}">Add your first address!</a></p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
