@@ -1,0 +1,114 @@
+{% extends 'accounts/base.html' %}
+
+{% block accounts_content %}
+<div class="form-header">
+    <h1>{{ title }}</h1>
+    <a href="{% url 'accounts:address_list' %}" class="btn btn-secondary">Back to Addresses</a>
+</div>
+
+<div class="form-container">
+    <form method="post" class="address-form">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <h2><i class="fa-solid fa-tag"></i> Address Type</h2>
+            <div class="form-group">
+                {{ form.address_type }}
+                {% if form.address_type.errors %}
+                    <div class="error">{{ form.address_type.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2><i class="fa-solid fa-user"></i> Contact Information</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}">First Name *</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <div class="error">{{ form.first_name.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}">Last Name *</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <div class="error">{{ form.last_name.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2><i class="fa-solid fa-location-dot"></i> Address Details</h2>
+            <div class="form-group">
+                <label for="{{ form.address_line_1.id_for_label }}">Address Line 1 *</label>
+                {{ form.address_line_1 }}
+                {% if form.address_line_1.errors %}
+                    <div class="error">{{ form.address_line_1.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.address_line_2.id_for_label }}">Address Line 2</label>
+                {{ form.address_line_2 }}
+                {% if form.address_line_2.errors %}
+                    <div class="error">{{ form.address_line_2.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.city.id_for_label }}">City *</label>
+                    {{ form.city }}
+                    {% if form.city.errors %}
+                        <div class="error">{{ form.city.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.state.id_for_label }}">State/Province *</label>
+                    {{ form.state }}
+                    {% if form.state.errors %}
+                        <div class="error">{{ form.state.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.postal_code.id_for_label }}">Postal Code *</label>
+                    {{ form.postal_code }}
+                    {% if form.postal_code.errors %}
+                        <div class="error">{{ form.postal_code.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.country.id_for_label }}">Country *</label>
+                    {{ form.country }}
+                    {% if form.country.errors %}
+                        <div class="error">{{ form.country.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="checkbox-group">
+                {{ form.is_default }}
+                <label for="{{ form.is_default.id_for_label }}">
+                    Set as default {{ form.address_type.value }} address
+                </label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Address</button>
+            <a href="{% url 'accounts:address_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
