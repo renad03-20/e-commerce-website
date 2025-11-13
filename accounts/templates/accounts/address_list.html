@@ -1,0 +1,56 @@
+{% extends 'accounts/base.html' %}
+
+{% block accounts_content %}
+<div class="addresses-header">
+    <h1>Address Book</h1>
+    <a href="{% url 'accounts:address_create' %}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Add New Address
+    </a>
+</div>
+
+<div class="addresses-container">
+    {% if addresses %}
+    <div class="addresses-grid">
+        {% for address in addresses %}
+        <div class="address-card {% if address.is_default %}default-address{% endif %}">
+            <div class="address-header">
+                <h3>{{ address.get_address_type_display }} Address</h3>
+                {% if address.is_default %}
+                <span class="default-badge">Default</span>
+                {% endif %}
+            </div>
+            
+            <div class="address-details">
+                <p><strong>{{ address.first_name }} {{ address.last_name }}</strong></p>
+                <p>{{ address.address_line_1 }}</p>
+                {% if address.address_line_2 %}
+                <p>{{ address.address_line_2 }}</p>
+                {% endif %}
+                <p>{{ address.city }}, {{ address.state }} {{ address.postal_code }}</p>
+                <p>{{ address.country.name }}</p>
+            </div>
+            
+            <div class="address-actions">
+                <a href="{% url 'accounts:address_edit' address.pk %}" class="btn-edit">Edit</a>
+                <a href="{% url 'accounts:address_delete' address.pk %}" class="btn-delete">Delete</a>
+                {% if not address.is_default %}
+                <form method="post" action="{% url 'accounts:address_edit' address.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="is_default" value="true">
+                    <button type="submit" class="btn-set-default">Set as Default</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🏠</div>
+        <h2>No Addresses Saved</h2>
+        <p>Add your first address to make checkout faster!</p>
+        <a href="{% url 'accounts:address_create' %}" class="btn btn-primary">Add Your First Address</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
