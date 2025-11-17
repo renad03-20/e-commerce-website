@@ -12,7 +12,7 @@ class Category(models.Model):
         if first_artwork and first_artwork.image:
             return first_artwork.image.url
 
-        return 'static/img/category-placeholder.jpg' 
+        return '/static/img/category-placeholder.jpg' 
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
