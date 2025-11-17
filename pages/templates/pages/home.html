@@ -61,7 +61,7 @@
             {% for category in categories %}
             <div class="type {% cycle 'tall' '' 'tall' '' %}">
                 <a href="{% url 'artwork_list' %}?category={{ category.slug }}">
-                    <img src="{{ category.get_first_artwork_image_url }}" alt="{{ category.name }}">
+                    <img src="{{ category.get_first_image_url }}" alt="{{ category.name }}">
                     <h4>{{ category.name }}</h4>
                 </a>
             </div>
