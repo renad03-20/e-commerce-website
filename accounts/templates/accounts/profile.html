@@ -83,7 +83,7 @@
                 </div>
                 <div class="order-total">${{ order.get_total_cost }}</div>
                 <div class="order-actions">
-                    <a href="{% url 'orders:order_detail' order.order_number %}" class="btn-view">View Details</a>
+                    <a href="{% url 'order_detail' order.order_number %}" class="btn-view">View Details</a>
                 </div>
             </div>
             {% endfor %}
