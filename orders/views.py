@@ -65,9 +65,9 @@ def order_create(request):
             # print(f'debug after clearing cart  {cart.items.count()} items')
 
             #! store order ID in session for payment process
-            request.session['order_id'] = order.id
+            request.session['order_id'] = order.order_number
 
-            messages.success(request, f'Order #{order.id} created! Please complete payment.')
+            messages.success(request, f'Order #{order.order_number} created! Please complete payment.')
             return redirect('payment_process')
         
     else:
@@ -110,9 +110,9 @@ def order_create(request):
     }
     return render(request, 'orders/order_create.html', context)
         
-def order_created(request, order_id):
+def order_created(request, order_number):
     #! Order confirmation page
-    order = get_object_or_404(Order, id=order_id)
+    order = get_object_or_404(Order, order_number=order_number)
     
     #! Security check: ensure user can only see their own orders
     if request.user.is_authenticated and order.user != request.user:
@@ -142,9 +142,9 @@ def order_list(request):
     return render(request, 'orders/order_list.html', context)
 
 @login_required
-def order_detail(request, order_id):
+def order_detail(request, order_number):
     #! Display order details
-    order = get_object_or_404(Order, id=order_id)
+    order = get_object_or_404(Order, order_number=order_number)
     
     #! Security check: ensure user can only see their own orders
     if order.user != request.user:
@@ -193,7 +193,7 @@ def payment_process(request):
     stripe.api_key = settings.STRIPE_SECRET_KEY
     
     order_id = request.session.get('order_id')
-    order = get_object_or_404(Order, id=order_id)
+    order = get_object_or_404(Order, order_number=order_id)
     
     if request.method == 'POST':
         success_url = request.build_absolute_uri(reverse('payment_completed'))
@@ -202,7 +202,7 @@ def payment_process(request):
         # Stripe checkout session data
         session_data = {
             'mode': 'payment',
-            'client_reference_id': order.id,
+            'client_reference_id': order.order_number,
             'success_url': success_url,
             'cancel_url': cancel_url,
             'line_items': []
@@ -294,8 +294,8 @@ def payment_completed(request):
     if 'order_id' in request.session:
         del request.session['order_id']
     
-    messages.success(request, f'Payment completed successfully! Order #{order.id} is being processed.')
-    return render(request, 'orders/payment/completed.html', {'order': order})
+    messages.success(request, f'Payment completed successfully! Order #{order.order_number} is being processed.')
+    return redirect('order_created', order_number=order.order_number)  
 
 def payment_canceled(request):
     """
