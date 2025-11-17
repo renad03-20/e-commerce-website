@@ -37,21 +37,26 @@
                     <ul>
                         <li><a href="{% url 'home' %}">Home</a></li>
                         <li><a href="{% url 'artwork_list' %}">Gallery</a></li>
-                        <li><a href="#">Contact Us</a></li>
+                        <!-- <li><a href="#">Contact Us</a></li> -->
                         
                         {% if user.is_authenticated %}
                             <!-- User is logged in -->
-                            <li>
+                            <!-- <li>
                                 <a href="#">
                                     <i class="fa-solid fa-user"></i> {{ user.username }}
                                 </a>
-                            </li>
+                            </li> -->
                             <li>
                                 <a href="{% url 'cart:cart_detail' %}">
                                     <i class="fa-solid fa-cart-shopping"></i>
                                     {% if cart_total_quantity and cart_total_quantity > 0 %}
                                         <span class="cart-count">{{ cart_total_quantity }}</span>
                                     {% endif %}
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{% url 'accounts:profile' %}">
+                                    <i class="fa-solid fa-user"></i> My Account
                                 </a>
                             </li>
                             {% if is_artist %}
