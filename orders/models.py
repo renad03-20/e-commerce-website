@@ -41,6 +41,15 @@ class Order(models.Model):
     ]
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    #! tracking information 
+    tracking_number = models.CharField(max_length=100, blank=True)
+    shipping_carrier = models.CharField(max_length=100, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    #! add notes field for internal communication
+    artist_notes = models.TextField(blank=True)
     
     class Meta:
         ordering = ['-created']
@@ -74,6 +83,17 @@ class OrderItem(models.Model):
 
     artwork_title = models.CharField(max_length=255, blank=True)
     artist_name = models.CharField(max_length=255, blank=True)
+
+    #! artist specific tracking 
+    artist_fulfillment_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'pending'),
+            ('preparing', 'preparing'),
+            ('shipped', 'shipped'),
+            ('delivered', 'delivered')
+        ]
+    )
 
     def __str__(self):
         return f'{self.artwork_title} ({self.quantity})'
