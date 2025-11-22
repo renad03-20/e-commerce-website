@@ -3,12 +3,16 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from .models import Order, OrderItem
-from .forms import OrderCreateForm
+from .forms import OrderCreateForm, OrderShippingForm
 from cart.utils import get_or_create_cart
 from artwork.models import Artwork
 import stripe
 from django.conf import settings
 from django.urls import reverse
+from django.views.generic import UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db.models import Sum, Count, Avg
+from datetime import datetime, timedelta
 
 @login_required
 def order_create(request):
@@ -306,4 +310,220 @@ def payment_canceled(request):
     
     messages.warning(request, 'Payment was cancelled. You can try again.')
     return render(request, 'orders/payment/canceled.html', {'order': order})
+
+@login_required
+def artist_orders_dashboard(request):
+    """
+    Comprehensive artist order dashboard
+    """
+    # Get orders containing this artist's artworks
+    orders = Order.objects.filter(
+        items__artwork__artist=request.user
+    ).distinct().order_by('-created')
     
+    # Calculate statistics
+    total_orders = orders.count()
+    
+    # Status breakdown
+    status_counts = orders.values('status').annotate(count=models.Count('id'))
+    
+    # Last 30 days sales
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    recent_sales = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True,
+        order__created__gte=thirty_days_ago
+    ).aggregate(
+        total_revenue=Sum('price' * models.F('quantity')),
+        total_items=Sum('quantity')
+    )
+    
+    # Monthly sales data for chart
+    monthly_sales = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True,
+        order__created__gte=datetime.now() - timedelta(days=365)
+    ).extra({
+        'month': "strftime('%%Y-%%m', orders_order.created)"
+    }).values('month').annotate(
+        revenue=Sum(models.F('price') * models.F('quantity')),
+        orders=Count('order', distinct=True)
+    ).order_by('month')
+    
+    # Best selling artworks
+    best_sellers = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True
+    ).values(
+        'artwork__title', 'artwork__id'
+    ).annotate(
+        total_sold=Sum('quantity'),
+        total_revenue=Sum(models.F('price') * models.F('quantity'))
+    ).order_by('-total_sold')[:5]
+    
+    context = {
+        'orders': orders,
+        'total_orders': total_orders,
+        'status_counts': status_counts,
+        'recent_sales': recent_sales,
+        'monthly_sales': list(monthly_sales),
+        'best_sellers': best_sellers,
+    }
+    return render(request, 'orders/artist_orders_dashboard.html', context)
+
+@login_required
+def artist_order_detail(request, order_number):
+    """
+    Detailed view of an order for the artist
+    """
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    # Security check - ensure artist owns items in this order
+    artist_items = order.items.filter(artwork__artist=request.user)
+    if not artist_items.exists():
+        messages.error(request, "You don't have permission to view this order.")
+        return redirect('orders:artist_orders_dashboard')
+    
+    if request.method == 'POST':
+        # Handle status updates
+        new_status = request.POST.get('status')
+        tracking_number = request.POST.get('tracking_number')
+        shipping_carrier = request.POST.get('shipping_carrier')
+        artist_notes = request.POST.get('artist_notes')
+        
+        if new_status in dict(OrderItem._meta.get_field('artist_fulfillment_status').choices):
+            # Update artist-specific fulfillment status for their items
+            artist_items.update(artist_fulfillment_status=new_status)
+            
+            # Update order tracking if provided
+            if tracking_number:
+                order.tracking_number = tracking_number
+                order.shipping_carrier = shipping_carrier
+                if new_status == 'shipped' and not order.shipped_at:
+                    order.shipped_at = timezone.now()
+                elif new_status == 'delivered' and not order.delivered_at:
+                    order.delivered_at = timezone.now()
+            
+            if artist_notes:
+                order.artist_notes = artist_notes
+            
+            order.save()
+            messages.success(request, f'Order status updated to {new_status}.')
+        
+        return redirect('orders:artist_order_detail', order_number=order.order_number)
+    
+    context = {
+        'order': order,
+        'artist_items': artist_items,
+    }
+    return render(request, 'orders/artist_order_detail.html', context)
+
+@login_required
+def mark_order_shipped(request, order_number):
+    """
+    Mark order as shipped with tracking info
+    """
+    order = get_object_or_404(Order, order_number=order_number)
+    artist_items = order.items.filter(artwork__artist=request.user)
+    
+    if not artist_items.exists():
+        messages.error(request, "You don't have permission to update this order.")
+        return redirect('orders:artist_orders_dashboard')
+    
+    if request.method == 'POST':
+        form = OrderShippingForm(request.POST, instance=order)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.shipped_at = timezone.now()
+            order.status = 'shipped'
+            order.save()
+            
+            # Update artist fulfillment status
+            artist_items.update(artist_fulfillment_status='shipped')
+            
+            messages.success(request, f'Order #{order.order_number} marked as shipped!')
+            return redirect('orders:artist_order_detail', order_number=order.order_number)
+    else:
+        form = OrderShippingForm(instance=order)
+    
+    context = {
+        'order': order,
+        'form': form,
+    }
+    return render(request, 'orders/mark_shipped.html', context)
+
+@login_required
+def artist_sales_analytics(request):
+    """
+    Detailed sales analytics for artists
+    """
+    from django.db.models import Sum, Count, Avg
+    from datetime import datetime, timedelta
+    
+    # Time periods
+    today = datetime.now().date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+    year_ago = today - timedelta(days=365)
+    
+    # Overall stats
+    total_stats = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True
+    ).aggregate(
+        total_revenue=Sum(models.F('price') * models.F('quantity')),
+        total_orders=Count('order', distinct=True),
+        total_items=Sum('quantity'),
+        avg_order_value=Avg(models.F('price') * models.F('quantity'))
+    )
+    
+    # Time-based stats
+    recent_stats = {
+        'week': OrderItem.objects.filter(
+            artwork__artist=request.user,
+            order__paid=True,
+            order__created__gte=week_ago
+        ).aggregate(
+            revenue=Sum(models.F('price') * models.F('quantity')),
+            orders=Count('order', distinct=True)
+        ),
+        'month': OrderItem.objects.filter(
+            artwork__artist=request.user,
+            order__paid=True,
+            order__created__gte=month_ago
+        ).aggregate(
+            revenue=Sum(models.F('price') * models.F('quantity')),
+            orders=Count('order', distinct=True)
+        ),
+    }
+    
+    # Monthly revenue for chart
+    monthly_revenue = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True,
+        order__created__gte=year_ago
+    ).extra({
+        'month': "strftime('%%Y-%%m', orders_order.created)"
+    }).values('month').annotate(
+        revenue=Sum(models.F('price') * models.F('quantity'))
+    ).order_by('month')
+    
+    # Top performing artworks
+    top_artworks = OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True
+    ).values(
+        'artwork__title', 'artwork__id', 'artwork__image'
+    ).annotate(
+        total_sold=Sum('quantity'),
+        total_revenue=Sum(models.F('price') * models.F('quantity')),
+        order_count=Count('order', distinct=True)
+    ).order_by('-total_revenue')[:10]
+    
+    context = {
+        'total_stats': total_stats,
+        'recent_stats': recent_stats,
+        'monthly_revenue': list(monthly_revenue),
+        'top_artworks': top_artworks,
+    }
+    return render(request, 'orders/artist_sales_analytics.html', context)
