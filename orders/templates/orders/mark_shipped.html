@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mark Order as Shipped{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/artist_orders.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="mark-shipped-page">
+    <div class="container">
+        <div class="shipping-header">
+            <h1>📦 Mark Order as Shipped</h1>
+            <p>Order #{{ order.order_number }}</p>
+        </div>
+
+        <div class="shipping-content">
+            <!-- Order Summary -->
+            <div class="order-summary-card">
+                <h3>Order Summary</h3>
+                <div class="order-items">
+                    {% for item in order.items.all %}
+                        {% if item.artwork.artist == user %}
+                        <div class="shipping-item">
+                            <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}">
+                            <div class="item-info">
+                                <h4>{{ item.artwork_title }}</h4>
+                                <p>Quantity: {{ item.quantity }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="customer-info">
+                    <p><strong>Shipping to:</strong> {{ order.first_name }} {{ order.last_name }}</p>
+                    <p>{{ order.address }}, {{ order.city }}, {{ order.postal_code }}</p>
+                </div>
+            </div>
+
+            <!-- Shipping Form -->
+            <div class="shipping-form-card">
+                <form method="post" class="shipping-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="{{ form.tracking_number.id_for_label }}">Tracking Number *</label>
+                        {{ form.tracking_number }}
+                        {% if form.tracking_number.errors %}
+                            <div class="error">{{ form.tracking_number.errors }}</div>
+                        {% endif %}
+                        <small>Enter the tracking number provided by your shipping carrier</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.shipping_carrier.id_for_label }}">Shipping Carrier *</label>
+                        {{ form.shipping_carrier }}
+                        {% if form.shipping_carrier.errors %}
+                            <div class="error">{{ form.shipping_carrier.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            ✅ Mark as Shipped
+                        </button>
+                        <a href="{% url 'orders:artist_order_detail' order.order_number %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Shipping Tips -->
+        <div class="shipping-tips">
+            <h3>📝 Shipping Tips</h3>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <h4>📦 Packaging</h4>
+                    <p>Use bubble wrap and sturdy boxes to protect artwork during transit.</p>
+                </div>
+                <div class="tip-card">
+                    <h4>🏷️ Insurance</h4>
+                    <p>Consider insuring valuable pieces against damage or loss.</p>
+                </div>
+                <div class="tip-card">
+                    <h4>📞 Communication</h4>
+                    <p>Update the tracking info promptly so customers can follow their shipment.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
