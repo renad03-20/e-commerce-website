@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order #{{ order.order_number }} - Artist View{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/artist_orders.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="artist-order-detail">
+    <div class="container">
+        <!-- Header -->
+        <div class="order-header">
+            <div class="header-left">
+                <h1>Order #{{ order.order_number }}</h1>
+                <p class="order-date">Placed on {{ order.created|date:"F d, Y" }}</p>
+            </div>
+            <div class="header-right">
+                <a href="{% url 'orders:artist_orders_dashboard' %}" class="btn btn-secondary">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Order Status & Actions -->
+        <div class="order-status-section">
+            <div class="status-card">
+                <h3>Order Status</h3>
+                <div class="status-display">
+                    <span class="status-badge status-{{ order.status }}">
+                        {{ order.get_status_display }}
+                    </span>
+                    {% if order.shipped_at %}
+                    <p class="status-date">Shipped on {{ order.shipped_at|date:"M d, Y" }}</p>
+                    {% endif %}
+                    {% if order.delivered_at %}
+                    <p class="status-date">Delivered on {{ order.delivered_at|date:"M d, Y" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="actions-card">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    {% if order.status != 'shipped' and order.status != 'delivered' %}
+                    <a href="{% url 'orders:mark_order_shipped' order.order_number %}" class="btn btn-primary">
+                        📦 Mark as Shipped
+                    </a>
+                    {% endif %}
+                    
+                    {% if order.tracking_number %}
+                    <a href="#" class="btn btn-outline" onclick="copyTrackingNumber()">
+                        📋 Copy Tracking
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Items -->
+        <div class="order-items-section">
+            <h2>Your Artworks in This Order</h2>
+            <div class="artist-items-list">
+                {% for item in artist_items %}
+                <div class="artist-order-item">
+                    <div class="item-image">
+                        <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}">
+                    </div>
+                    <div class="item-details">
+                        <h4>{{ item.artwork_title }}</h4>
+                        <p class="item-meta">
+                            Quantity: {{ item.quantity }} × ${{ item.price }} = 
+                            <strong>${{ item.get_cost }}</strong>
+                        </p>
+                        <div class="fulfillment-status">
+                            <span class="status-label">Your Status:</span>
+                            <span class="status-badge status-{{ item.artist_fulfillment_status }}">
+                                {{ item.get_artist_fulfillment_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Customer & Shipping Info -->
+        <div class="customer-info-section">
+            <div class="info-card">
+                <h3>Customer Information</h3>
+                <div class="info-content">
+                    <p><strong>{{ order.first_name }} {{ order.last_name }}</strong></p>
+                    <p>{{ order.email }}</p>
+                    <p>{{ order.address }}</p>
+                    <p>{{ order.city }}, {{ order.postal_code }}</p>
+                    <p>{{ order.country }}</p>
+                </div>
+            </div>
+
+            <!-- Shipping & Tracking -->
+            {% if order.tracking_number %}
+            <div class="tracking-card">
+                <h3>Shipping Information</h3>
+                <div class="tracking-info">
+                    <p><strong>Tracking Number:</strong> 
+                        <span id="tracking-number">{{ order.tracking_number }}</span>
+                        <button class="copy-btn" onclick="copyTrackingNumber()" title="Copy tracking number">
+                            📋
+                        </button>
+                    </p>
+                    <p><strong>Carrier:</strong> {{ order.shipping_carrier|upper }}</p>
+                    {% if order.shipped_at %}
+                    <p><strong>Shipped:</strong> {{ order.shipped_at|date:"M d, Y" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Status Update Form -->
+        <div class="status-update-section">
+            <div class="update-card">
+                <h3>Update Order Status</h3>
+                <form method="post" class="status-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="status">Update Your Fulfillment Status</label>
+                        <select name="status" id="status" class="form-control" required>
+                            <option value="pending" {% if artist_items.0.artist_fulfillment_status == 'pending' %}selected{% endif %}>
+                                Pending
+                            </option>
+                            <option value="preparing" {% if artist_items.0.artist_fulfillment_status == 'preparing' %}selected{% endif %}>
+                                Preparing
+                            </option>
+                            <option value="shipped" {% if artist_items.0.artist_fulfillment_status == 'shipped' %}selected{% endif %}>
+                                Shipped
+                            </option>
+                            <option value="delivered" {% if artist_items.0.artist_fulfillment_status == 'delivered' %}selected{% endif %}>
+                                Delivered
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tracking_number">Tracking Number (Optional)</label>
+                        <input type="text" name="tracking_number" id="tracking_number" 
+                               class="form-control" value="{{ order.tracking_number }}"
+                               placeholder="Enter tracking number">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shipping_carrier">Shipping Carrier</label>
+                        <select name="shipping_carrier" id="shipping_carrier" class="form-control">
+                            <option value="">Select carrier</option>
+                            <option value="usps" {% if order.shipping_carrier == 'usps' %}selected{% endif %}>USPS</option>
+                            <option value="ups" {% if order.shipping_carrier == 'ups' %}selected{% endif %}>UPS</option>
+                            <option value="fedex" {% if order.shipping_carrier == 'fedex' %}selected{% endif %}>FedEx</option>
+                            <option value="dhl" {% if order.shipping_carrier == 'dhl' %}selected{% endif %}>DHL</option>
+                            <option value="other" {% if order.shipping_carrier == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="artist_notes">Private Notes (Customer won't see these)</label>
+                        <textarea name="artist_notes" id="artist_notes" class="form-control" 
+                                  rows="3" placeholder="Add private notes about this order...">{{ order.artist_notes }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update Status</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyTrackingNumber() {
+    const trackingNumber = document.getElementById('tracking-number').textContent;
+    navigator.clipboard.writeText(trackingNumber).then(function() {
+        // Show temporary success message
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}
