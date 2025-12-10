@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Artist Orders - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/artist_orders.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="artist-orders-dashboard">
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>🎨 Order Management</h1>
+            <p>Manage your artwork orders and track your sales</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-info">
+                    <h3>{{ total_orders }}</h3>
+                    <p>Total Orders</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info">
+                    <h3>${{ recent_sales.total_revenue|default:0|floatformat:2 }}</h3>
+                    <p>30-Day Revenue</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🛒</div>
+                <div class="stat-info">
+                    <h3>{{ recent_sales.total_items|default:0 }}</h3>
+                    <p>Items Sold</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-info">
+                    <h3>{{ best_sellers.0.total_sold|default:0 }}</h3>
+                    <p>Best Seller Qty</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Recent Orders -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2>Recent Orders</h2>
+                    <a href="{% url 'orders:artist_sales_analytics' %}" class="btn btn-outline">View Analytics</a>
+                </div>
+
+                {% if orders %}
+                <div class="orders-table">
+                    <div class="table-header">
+                        <div class="col-order">Order #</div>
+                        <div class="col-date">Date</div>
+                        <div class="col-items">Items</div>
+                        <div class="col-total">Total</div>
+                        <div class="col-status">Status</div>
+                        <div class="col-actions">Actions</div>
+                    </div>
+
+                    {% for order in orders|slice:":10" %}
+                    <div class="table-row">
+                        <div class="col-order">
+                            <strong>#{{ order.order_number }}</strong>
+                        </div>
+                        <div class="col-date">
+                            {{ order.created|date:"M d, Y" }}
+                        </div>
+                        <div class="col-items">
+                            {% for item in order.items.all %}
+                                {% if item.artwork.artist == user %}
+                                <div class="order-item-preview">
+                                    <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}">
+                                    <span>{{ item.artwork_title }} × {{ item.quantity }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="col-total">
+                            ${{ order.get_total_cost|floatformat:2 }}
+                        </div>
+                        <div class="col-status">
+                            <span class="status-badge status-{{ order.status }}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-actions">
+                            <a href="{% url 'orders:artist_order_detail' order.order_number %}" 
+                               class="btn-view">Manage</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <h3>No Orders Yet</h3>
+                    <p>Your artwork hasn't been purchased yet. Keep creating and promoting your work!</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Best Sellers -->
+            {% if best_sellers %}
+            <div class="dashboard-section">
+                <h2>Best Selling Artworks</h2>
+                <div class="best-sellers">
+                    {% for item in best_sellers %}
+                    <div class="best-seller-card">
+                        <img src="{{ item.artwork__image.url }}" alt="{{ item.artwork__title }}">
+                        <div class="seller-info">
+                            <h4>{{ item.artwork__title }}</h4>
+                            <p class="sales-data">
+                                <strong>{{ item.total_sold }}</strong> sold • 
+                                ${{ item.total_revenue|floatformat:2 }} revenue
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
