@@ -13,6 +13,8 @@ from django.views.generic import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Sum, Count, Avg
 from datetime import datetime, timedelta
+from django.utils import timezone
+from django.db import models
 
 @login_required
 def order_create(request):
@@ -159,35 +161,6 @@ def order_detail(request, order_number):
         'order': order,
     }
     return render(request, 'orders/order_detail.html', context)
-
-@login_required
-def artist_orders(request):
-    #! display orders for artist's artwork
-
-   # Get orders that contain artworks by this artist
-    orders = Order.objects.filter(
-        items__artwork__artist=request.user
-    ).distinct().order_by('-created')
-    
-    # Calculate artist statistics
-    total_sales = OrderItem.objects.filter(
-        artwork__artist=request.user,
-        order__paid=True
-    ).count()
-    
-    total_revenue = sum(
-        item.get_cost() for item in OrderItem.objects.filter(
-            artwork__artist=request.user,
-            order__paid=True
-        )
-    )
-    
-    context = {
-        'orders': orders,
-        'total_sales': total_sales,
-        'total_revenue': total_revenue,
-    }
-    return render(request, 'orders/artist_orders.html', context)
 
 def payment_process(request):
     """
