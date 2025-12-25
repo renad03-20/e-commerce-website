@@ -1,5 +1,5 @@
 from django import forms
-from .models import Order
+from .models import Order, OrderItem
 
 class OrderCreateForm(forms.ModelForm):
     class Meta:
@@ -20,3 +20,47 @@ class OrderCreateForm(forms.ModelForm):
         #! Set required to True for all fields
         for field in self.fields:
             self.fields[field].required = True
+
+class OrderShippingForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ['tracking_number', 'shipping_carrier']
+        widgets = {
+            'tracking_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter tracking number'
+            }),
+            'shipping_carrier': forms.Select(attrs={'class': 'form-control'}, choices=[
+                ('', 'Select carrier'),
+                ('usps', 'USPS'),
+                ('ups', 'UPS'),
+                ('fedex', 'FedEx'),
+                ('dhl', 'DHL'),
+                ('other', 'Other'),
+            ]),
+        }
+
+class OrderStatusForm(forms.Form):
+    status = forms.ChoiceField(
+        choices=OrderItem._meta.get_field('artist_fulfillment_status').choices,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    tracking_number = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Tracking number (optional)'
+        })
+    )
+    shipping_carrier = forms.ChoiceField(
+        required=False,
+        choices=[
+            ('', 'Select carrier'),
+            ('usps', 'USPS'),
+            ('ups', 'UPS'),
+            ('fedex', 'FedEx'),
+            ('dhl', 'DHL'),
+            ('other', 'Other'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
