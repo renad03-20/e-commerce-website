@@ -17,7 +17,7 @@
                 <p class="order-date">Placed on {{ order.created|date:"F d, Y" }}</p>
             </div>
             <div class="header-right">
-                <a href="{% url 'orders:artist_orders_dashboard' %}" class="btn btn-secondary">
+                <a href="{% url 'artist_orders_dashboard' %}" class="btn btn-secondary">
                     ← Back to Dashboard
                 </a>
             </div>
@@ -45,7 +45,7 @@
                 <h3>Quick Actions</h3>
                 <div class="action-buttons">
                     {% if order.status != 'shipped' and order.status != 'delivered' %}
-                    <a href="{% url 'orders:mark_order_shipped' order.order_number %}" class="btn btn-primary">
+                    <a href="{% url 'mark_order_shipped' order.order_number %}" class="btn btn-primary">
                         📦 Mark as Shipped
                     </a>
                     {% endif %}
