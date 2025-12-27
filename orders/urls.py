@@ -6,7 +6,6 @@ urlpatterns = [
     path('created/<str:order_number>/', views.order_created, name='order_created'),
     path('history/', views.order_list, name='order_list'),
     path('<str:order_number>/', views.order_detail, name='order_detail'),
-    path('artist/orders/', views.artist_orders, name='artist_orders'),
     
     # Payment URLs
     path('payment/process/', views.payment_process, name='payment_process'),
