@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sales Analytics - Artist Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/artist_orders.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="sales-analytics">
+    <div class="container">
+        <!-- Header -->
+        <div class="analytics-header">
+            <h1>📊 Sales Analytics</h1>
+            <p>Track your artwork performance and revenue</p>
+            <a href="{% url 'artist_orders_dashboard' %}" class="btn btn-secondary">
+                ← Back to Orders
+            </a>
+        </div>
+
+        <!-- Overview Stats -->
+        <div class="analytics-overview">
+            <div class="overview-stats">
+                <div class="stat-card large">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-info">
+                        <h3>${{ total_stats.total_revenue|default:0|floatformat:2 }}</h3>
+                        <p>Total Revenue</p>
+                    </div>
+                </div>
+                <div class="stat-card large">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-info">
+                        <h3>{{ total_stats.total_orders|default:0 }}</h3>
+                        <p>Total Orders</p>
+                    </div>
+                </div>
+                <div class="stat-card large">
+                    <div class="stat-icon">🎨</div>
+                    <div class="stat-info">
+                        <h3>{{ total_stats.total_items|default:0 }}</h3>
+                        <p>Artworks Sold</p>
+                    </div>
+                </div>
+                <div class="stat-card large">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-info">
+                        <h3>${{ total_stats.avg_order_value|default:0|floatformat:2 }}</h3>
+                        <p>Average Order Value</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Performance -->
+        <div class="recent-performance">
+            <h2>Recent Performance</h2>
+            <div class="performance-grid">
+                <div class="performance-card">
+                    <h3>Last 7 Days</h3>
+                    <div class="performance-stats">
+                        <div class="performance-stat">
+                            <span class="stat-value">${{ recent_stats.week.revenue|default:0|floatformat:2 }}</span>
+                            <span class="stat-label">Revenue</span>
+                        </div>
+                        <div class="performance-stat">
+                            <span class="stat-value">{{ recent_stats.week.orders|default:0 }}</span>
+                            <span class="stat-label">Orders</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="performance-card">
+                    <h3>Last 30 Days</h3>
+                    <div class="performance-stats">
+                        <div class="performance-stat">
+                            <span class="stat-value">${{ recent_stats.month.revenue|default:0|floatformat:2 }}</span>
+                            <span class="stat-label">Revenue</span>
+                        </div>
+                        <div class="performance-stat">
+                            <span class="stat-value">{{ recent_stats.month.orders|default:0 }}</span>
+                            <span class="stat-label">Orders</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Revenue Chart -->
+        <div class="revenue-chart-section">
+            <h2>Monthly Revenue</h2>
+            <div class="chart-container">
+                <div class="revenue-chart">
+                    {% for month_data in monthly_revenue %}
+                    <div class="chart-bar-container">
+                        <div class="chart-bar" style="height: {{ month_data.revenue|default:0|divisibleby:100 }}%">
+                            <span class="bar-value">${{ month_data.revenue|default:0|floatformat:0 }}</span>
+                        </div>
+                        <span class="bar-label">{{ month_data.month|slice:"5:7" }}/{{ month_data.month|slice:"2:4" }}</span>
+                    </div>
+                    {% empty %}
+                    <div class="empty-chart">
+                        <p>No revenue data available yet</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performing Artworks -->
+        <div class="top-artworks-section">
+            <h2>🎨 Top Performing Artworks</h2>
+            {% if top_artworks %}
+            <div class="top-artworks-grid">
+                {% for artwork in top_artworks %}
+                <div class="top-artwork-card">
+                    <div class="artwork-image">
+                        <img src="{{ artwork.artwork__image.url }}" alt="{{ artwork.artwork__title }}">
+                    </div>
+                    <div class="artwork-stats">
+                        <h4>{{ artwork.artwork__title }}</h4>
+                        <div class="artwork-metrics">
+                            <div class="metric">
+                                <span class="metric-value">{{ artwork.total_sold }}</span>
+                                <span class="metric-label">Sold</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-value">${{ artwork.total_revenue|floatformat:2 }}</span>
+                                <span class="metric-label">Revenue</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-value">{{ artwork.order_count }}</span>
+                                <span class="metric-label">Orders</span>
+                            </div>
+                        </div>
+                        <div class="artwork-actions">
+                            <a href="{% url 'artwork_detail' artwork.artwork__id %}" class="btn-view">View</a>
+                            <a href="{% url 'artwork_update' artwork.artwork__id %}" class="btn-edit">Edit</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">🎨</div>
+                <h3>No Sales Data Yet</h3>
+                <p>Your analytics will appear here once you start making sales.</p>
+                <a href="{% url 'artwork_create' %}" class="btn btn-primary">Create More Artwork</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Insights & Recommendations -->
+        <div class="insights-section">
+            <h2>💡 Insights & Recommendations</h2>
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <h4>📈 Peak Seasons</h4>
+                    <p>Consider creating seasonal collections around holidays and special events when art sales typically increase.</p>
+                </div>
+                <div class="insight-card">
+                    <h4>🎯 Pricing Strategy</h4>
+                    <p>Your average order value is ${{ total_stats.avg_order_value|default:0|floatformat:2 }}. Consider bundling or creating series to increase this.</p>
+                </div>
+                <div class="insight-card">
+                    <h4>🔄 Inventory Management</h4>
+                    <p>Focus on creating more works similar to your top performers to maximize revenue.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
