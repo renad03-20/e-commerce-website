@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact Us - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/legal.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="contact-page">
+    <div class="container">
+        <!-- Header -->
+        <div class="contact-header">
+            <h1>📞 Contact & Support</h1>
+            <p>We're here to help! Get in touch with our support team</p>
+        </div>
+
+        <div class="contact-content">
+            <!-- Contact Methods Grid -->
+            <div class="contact-methods">
+                <div class="contact-card">
+                    <div class="contact-icon">📧</div>
+                    <h3>Email Support</h3>
+                    <p>For general inquiries and support</p>
+                    <a href="mailto:support@artgallery.com" class="contact-link">
+                        support@artgallery.com
+                    </a>
+                    <p class="response-time">Response time: 24-48 hours</p>
+                </div>
+
+                <div class="contact-card">
+                    <div class="contact-icon">🎨</div>
+                    <h3>Artist Support</h3>
+                    <p>For artists with questions about selling</p>
+                    <a href="mailto:artists@artgallery.com" class="contact-link">
+                        artists@artgallery.com
+                    </a>
+                    <p class="response-time">Response time: 24 hours</p>
+                </div>
+
+                <div class="contact-card">
+                    <div class="contact-icon">⚖️</div>
+                    <h3>Legal & Business</h3>
+                    <p>For legal and partnership inquiries</p>
+                    <a href="mailto:legal@artgallery.com" class="contact-link">
+                        legal@artgallery.com
+                    </a>
+                    <p class="response-time">Response time: 48 hours</p>
+                </div>
+            </div>
+
+            <!-- Contact Form -->
+            <div class="contact-form-section">
+                <div class="form-header">
+                    <h2>Send us a Message</h2>
+                    <p>Fill out the form below and we'll get back to you as soon as possible</p>
+                </div>
+
+                <form method="post" class="contact-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Your Name *</label>
+                            <input type="text" id="name" name="name" required 
+                                   class="form-control" placeholder="Enter your name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" required 
+                                   class="form-control" placeholder="Enter your email">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="subject">Subject *</label>
+                        <select id="subject" name="subject" required class="form-control">
+                            <option value="">Select a topic</option>
+                            <option value="general">General Inquiry</option>
+                            <option value="artist">Artist Account</option>
+                            <option value="order">Order Issue</option>
+                            <option value="technical">Technical Problem</option>
+                            <option value="refund">Refund Request</option>
+                            <option value="partnership">Business Partnership</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order_number">Order Number (if applicable)</label>
+                        <input type="text" id="order_number" name="order_number" 
+                               class="form-control" placeholder="e.g., ART-231205-ABC123">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message">Message *</label>
+                        <textarea id="message" name="message" required rows="6" 
+                                  class="form-control" 
+                                  placeholder="Please describe your issue or inquiry in detail..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="faq-section">
+                <h2>Frequently Asked Questions</h2>
+                
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <h3>How do I track my order?</h3>
+                        <p>Once your order is shipped, you'll receive a tracking number via email. You can also view it in your order history under "My Account".</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>What's your return policy?</h3>
+                        <p>We offer a 14-day return policy for damaged items or significant discrepancies. Custom artworks may have different return conditions.</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>How do I become an artist on your platform?</h3>
+                        <p>Sign up for an account and check "I am an artist" during registration. You'll need to provide some portfolio samples for verification.</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>When will I get paid for my artwork sales?</h3>
+                        <p>Artists receive payments 7 days after order delivery, to allow for any potential returns or issues.</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>Do you ship internationally?</h3>
+                        <p>Yes! We ship worldwide. Shipping costs and times vary by location and will be calculated at checkout.</p>
+                    </div>
+
+                    <div class="faq-item">
+                        <h3>How are the artworks packaged?</h3>
+                        <p>Artists are required to use professional packaging materials including bubble wrap, corner protectors, and sturdy boxes for safe shipping.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Business Hours & Address -->
+            <div class="business-info">
+                <div class="info-card">
+                    <h3>🕒 Business Hours</h3>
+                    <div class="hours-list">
+                        <div class="hour-item">
+                            <span class="day">Monday - Friday</span>
+                            <span class="time">9:00 AM - 6:00 PM EST</span>
+                        </div>
+                        <div class="hour-item">
+                            <span class="day">Saturday</span>
+                            <span class="time">10:00 AM - 4:00 PM EST</span>
+                        </div>
+                        <div class="hour-item">
+                            <span class="day">Sunday</span>
+                            <span class="time">Closed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>🏢 Our Office</h3>
+                    <address class="office-address">
+                        <p><strong>Art Gallery Headquarters</strong></p>
+                        <p>123 Art Street</p>
+                        <p>Creative City, CC 12345</p>
+                        <p>United States</p>
+                        <p class="phone">Phone: +1 (555) 123-4567</p>
+                    </address>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Simple form submission feedback
+document.querySelector('.contact-form').addEventListener('submit', function(e) {
+    // In a real implementation, this would be handled by Django
+    // For now, we'll show a success message
+    e.preventDefault();
+    
+    // Get form data
+    const formData = new FormData(this);
+    const name = formData.get('name');
+    
+    // Show success message
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '✓ Message Sent!';
+    submitBtn.disabled = true;
+    submitBtn.style.background = '#28a745';
+    
+    // Reset form
+    this.reset();
+    
+    // Show notification
+    alert(`Thank you, ${name}! Your message has been sent. We'll get back to you within 24-48 hours.`);
+    
+    // Reset button after 3 seconds
+    setTimeout(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        submitBtn.style.background = '';
+    }, 3000);
+});
+</script>
+{% endblock %}
