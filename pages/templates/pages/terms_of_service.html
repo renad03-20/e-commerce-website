@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Terms of Service - Art Gallery{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+    <div class="container">
+        <div class="legal-header">
+            <h1>📜 Terms of Service</h1>
+            <p class="last-updated">Last Updated: {% now "F j, Y" %}</p>
+        </div>
+
+        <div class="legal-content">
+            <!-- Introduction -->
+            <section class="legal-section">
+                <h2>1. Agreement to Terms</h2>
+                <p>By accessing and using Art Gallery ("the Platform"), you accept and agree to be bound by the terms and provision of this agreement. In addition, when using this Platform's particular services, you shall be subject to any posted guidelines or rules applicable to such services.</p>
+            </section>
+
+            <!-- User Accounts -->
+            <section class="legal-section">
+                <h2>2. User Accounts</h2>
+                <p>When you create an account with us, you must provide information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our service.</p>
+                
+                <p>You are responsible for safeguarding the password that you use to access the service and for any activities or actions under your password, whether your password is with our service or a third-party service.</p>
+                
+                <p>You agree not to disclose your password to any third party. You must notify us immediately upon becoming aware of any breach of security or unauthorized use of your account.</p>
+            </section>
+
+            <!-- Intellectual Property -->
+            <section class="legal-section">
+                <h2>3. Intellectual Property Rights</h2>
+                <h3>3.1 For Artists:</h3>
+                <p>By listing artwork on Art Gallery, you grant us a non-exclusive, worldwide, royalty-free license to use, display, reproduce, and distribute your artwork solely for the purpose of operating and promoting the Platform.</p>
+                <p>You retain all copyright and other intellectual property rights to your artwork.</p>
+                
+                <h3>3.2 For Buyers:</h3>
+                <p>When you purchase artwork through Art Gallery, you are purchasing the physical artwork. You do not acquire any reproduction rights, copyrights, or other intellectual property rights to the artwork.</p>
+            </section>
+
+            <!-- Sales & Transactions -->
+            <section class="legal-section">
+                <h2>4. Sales & Transactions</h2>
+                <h3>4.1 Pricing:</h3>
+                <p>All prices are in US Dollars (USD) and include applicable taxes where required by law. Artists set their own prices, and Art Gallery charges a commission on each sale.</p>
+                
+                <h3>4.2 Payments:</h3>
+                <p>All payments are processed securely through Stripe. By making a purchase, you agree to provide valid payment information and authorize us to charge the full amount to your selected payment method.</p>
+                
+                <h3>4.3 Shipping:</h3>
+                <p>Artists are responsible for shipping sold artworks. Shipping costs and estimated delivery times are provided at checkout. Art Gallery is not responsible for delays, damages, or losses during shipping.</p>
+            </section>
+
+            <!-- Returns & Refunds -->
+            <section class="legal-section">
+                <h2>5. Returns & Refunds</h2>
+                <p>Art Gallery offers a 14-day return policy from the date of delivery for artworks that arrive damaged or significantly different from their description.</p>
+                
+                <p>To initiate a return:</p>
+                <ol>
+                    <li>Contact support within 14 days of delivery</li>
+                    <li>Provide photographs of the damage or discrepancy</li>
+                    <li>Wait for approval and return instructions</li>
+                    <li>Ship the artwork back in its original packaging</li>
+                </ol>
+                
+                <p>Custom or commissioned artworks are not eligible for returns unless they arrive damaged.</p>
+            </section>
+
+            <!-- Prohibited Uses -->
+            <section class="legal-section">
+                <h2>6. Prohibited Uses</h2>
+                <p>You may not use the Platform:</p>
+                <ul>
+                    <li>For any illegal purpose or to violate any laws</li>
+                    <li>To harass, abuse, or harm another person</li>
+                    <li>To impersonate or misrepresent your affiliation with any person or entity</li>
+                    <li>To interfere with or circumvent the security features of the service</li>
+                    <li>To upload or distribute viruses or any other malicious code</li>
+                    <li>To spam, phish, or engage in unethical marketing</li>
+                </ul>
+            </section>
+
+            <!-- Termination -->
+            <section class="legal-section">
+                <h2>7. Termination</h2>
+                <p>We may terminate or suspend your account immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.</p>
+                
+                <p>Upon termination, your right to use the service will immediately cease. If you wish to terminate your account, you may simply discontinue using the service or contact us to delete your account.</p>
+            </section>
+
+            <!-- Limitation of Liability -->
+            <section class="legal-section">
+                <h2>8. Limitation of Liability</h2>
+                <p>In no event shall Art Gallery, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:</p>
+                <ul>
+                    <li>Your access to or use of or inability to access or use the service</li>
+                    <li>Any conduct or content of any third party on the service</li>
+                    <li>Any content obtained from the service</li>
+                    <li>Unauthorized access, use or alteration of your transmissions or content</li>
+                </ul>
+            </section>
+
+            <!-- Changes to Terms -->
+            <section class="legal-section">
+                <h2>9. Changes to Terms</h2>
+                <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will try to provide at least 30 days' notice prior to any new terms taking effect.</p>
+                
+                <p>By continuing to access or use our service after those revisions become effective, you agree to be bound by the revised terms.</p>
+            </section>
+
+            <!-- Contact Information -->
+            <section class="legal-section">
+                <h2>10. Contact Us</h2>
+                <p>If you have any questions about these Terms, please contact us at:</p>
+                <address>
+                    <p><strong>Art Gallery</strong></p>
+                    <p>Email: legal@artgallery.com</p>
+                    <p>Address: 123 Art Street, Creative City, CC 12345</p>
+                </address>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
