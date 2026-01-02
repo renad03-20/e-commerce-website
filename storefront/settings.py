@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-a2=zblqo_%yk)zton#au+q006!jze+40@$&c=20f@+ty=agm-v'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -158,10 +158,11 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Prints to co
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 25
 
-# email settings for deployment 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'myEmail'
-# EMAIL_HOST_PASSWORD = 'password'
+#email settings for deployment 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'myEmail'
+EMAIL_HOST_PASSWORD = 'password'
+DEFAULT_FROM_EMAIL = f"Artsy Marketplace <{config('EMAIL_HOST_USER')}>"
