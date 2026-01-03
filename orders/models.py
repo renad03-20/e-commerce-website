@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from artwork.models import Artwork
 import uuid
+from decimal import Decimal
 
 class Order(models.Model):
     #! user information for logged in users 
@@ -74,6 +75,15 @@ class Order(models.Model):
     
     def get_total_quantity(self):
         return sum(item.quantity for item in self.items.all())
+    
+    def get_tax(self):
+        return self.get_total_cost() * Decimal('0.08')
+
+    def get_shipping(self):
+        return Decimal('10.00')
+
+    def get_grand_total(self):
+        return self.get_total_cost() + self.get_tax() + self.get_shipping()
     
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
