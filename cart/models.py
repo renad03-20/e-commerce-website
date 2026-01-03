@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from artwork.models import Artwork  
+from decimal import Decimal
 
 class Cart(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
@@ -14,10 +15,20 @@ class Cart(models.Model):
         return f"Anonymous Cart ({self.session_key})"
     
     def get_total_price(self):
+        """Sum of all item prices"""
         return sum(item.get_total_price() for item in self.items.all())
     
     def get_total_quantity(self):
         return sum(item.quantity for item in self.items.all())
+
+    def get_tax(self):
+        return self.get_total_price() * Decimal('0.08')
+
+    def get_shipping(self):
+        return Decimal('10.00')
+
+    def get_grand_total(self):
+        return self.get_total_price() + self.get_tax() + self.get_shipping()
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items")
