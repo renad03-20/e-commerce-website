@@ -9,24 +9,9 @@ def cart_detail(request):
     #! Display the contents of the shopping cart
     cart = get_or_create_cart(request)
     
-    #! Calculate totals with proper tax
-    from decimal import Decimal
-    cart_total = cart.get_total_price() or Decimal('0')
-    shipping_cost = Decimal('10.00')
-    tax_rate = Decimal('0.08')  # 8%
-    tax = cart_total * tax_rate
-    grand_total = cart_total + shipping_cost + tax
-
     context = {
         'cart': cart,
-        'cart_items': cart.items.all(),
-        'cart_total': cart_total,
-        'cart_total_price': cart_total,
-        'cart_quantity': cart.get_total_quantity(),
-        'shipping_cost': shipping_cost,
-        'tax': tax,
-        'tax_rate': tax_rate,
-        'grand_total': grand_total
+        'cart_items': cart.items.all()
     }
 
     return render(request, 'cart/cart_detail.html', context)

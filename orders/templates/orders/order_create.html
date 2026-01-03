@@ -38,16 +38,14 @@
                         <span>${{ cart_total|floatformat:2 }}</span>
                     </div>
                     <div class="total-row">
-                        <span>Shipping:</span>
-                        <span>${{ shipping_cost|floatformat:2 }}</span>
+                        <span>Shipping: {{ cart.get_shipping }}</span>
                     </div>
                     <div class="total-row">
-                        <span>Tax ({{ tax_rate|floatformat:1 }}%):</span>
-                        <span>${{ tax|floatformat:2 }}</span>
+                        <span>Tax {{ cart.get_tax }}):</span>
                     </div>
                     <div class="total-row grand-total">
-                        <span>Total:</span>
-                        <span>${{ grand_total|floatformat:2 }}</span>
+                        <span>Total: {{ cart.get_grand_total }}</span>
+
                     </div>
                 </div>
             </div>
