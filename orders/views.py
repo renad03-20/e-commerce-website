@@ -1,20 +1,66 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
-from .models import Order, OrderItem
-from .forms import OrderCreateForm, OrderShippingForm
-from cart.utils import get_or_create_cart
-from artwork.models import Artwork
-import stripe
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.urls import reverse
 from django.views.generic import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Sum, Count, Avg
-from datetime import datetime, timedelta
-from django.utils import timezone
 from django.db import models
+from django.db.models import Sum, Count, Avg, F
+from django.utils import timezone
+
+import stripe
+import json
+from datetime import datetime, timedelta
+
+from .models import Order, OrderItem
+from .forms import OrderCreateForm, OrderShippingForm
+from cart.utils import get_or_create_cart
+from artwork.models import Artwork
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    event = None
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except (ValueError, stripe.error.SignatureVerificationError):
+        return HttpResponse(status=400)
+
+    # Handle the checkout.session.completed event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        order_number = session.get('client_reference_id')
+
+        if not order_number:
+            return HttpResponse(status=400)
+        
+        try:
+            order = Order.objects.get(order_number=order_number)
+            if not order.paid:
+                # MARK AS PAID
+                order.paid = True
+                order.status = 'processing'
+                order.save()
+                
+                # UPDATE STOCK
+                for item in order.items.all():
+                    artwork = item.artwork
+                    artwork.stock -= item.quantity
+                    artwork.save()
+                    
+                # NOTE: You can't clear the cart here easily 
+                # because webhooks don't have access to the user's session.
+        except Order.DoesNotExist:
+            return HttpResponse(status=404)
+
+    return HttpResponse(status=200)
 
 @login_required
 def order_create(request):
@@ -87,32 +133,11 @@ def order_create(request):
             }
         form = OrderCreateForm(initial=initial_data)
 
-    #! calculate totals for display 
-    from decimal import Decimal
-
-    try:
-        cart_total = cart.get_total_price() or Decimal('0')
-        shipping_cost = Decimal('10.00')
-        tax_rate = Decimal('0.08')  # 8%
-        tax = cart_total * tax_rate
-        grand_total = cart_total + shipping_cost + tax
-    except Exception as e:
-        cart_total = Decimal('0')
-        shipping_cost = Decimal('0')
-        tax_rate = Decimal('0.08')
-        tax = Decimal('0')
-        grand_total = Decimal('0')
-        print(f"Calculation error: {e}")
 
     context = {
         'form': form,
         'cart': cart,
-        'cart_items': cart_items,
-        'cart_total': cart_total,
-        'shipping_cost': shipping_cost,
-        'tax': tax,
-        'tax_rate': tax_rate * Decimal('100'),  # Convert 0.08 to 8.0 for display
-        'grand_total': grand_total
+        'cart_items': cart_items
     }
     return render(request, 'orders/order_create.html', context)
         
@@ -221,59 +246,36 @@ def payment_process(request):
 
 def payment_completed(request):
     """
-    Handle successful payment
+    Handle successful payment - Focus on UX and Cleanup
     """
     order_id = request.session.get('order_id')
     if not order_id:
-        messages.error(request, "no order found.")
+        messages.error(request, "No order session found.")
         return redirect('home')
     
-    order = get_object_or_404(Order, id=order_id)
+    order = get_object_or_404(Order, order_number=order_id)
     
-    # Mark order as paid
-    order.paid = True
-    order.status = 'processing'
-    order.save()
-
-    # Update stock and clear cart
     try:
         from cart.utils import get_or_create_cart
-        from artwork.models import Artwork
-        
-        # Update artwork stock
-        for item in order.items.all():
-            artwork = Artwork.objects.get(id=item.artwork.id)
-            artwork.stock -= item.quantity
-            artwork.save()
-        
-        # Clear the cart
         cart = get_or_create_cart(request)
-        cart.items.all().delete()
-        
+        cart.items.all().delete() # Clean and simple
     except Exception as e:
-        print(f"DEBUG: Error in payment completion cleanup: {e}")
+        print(f"DEBUG: Cart cleanup failed: {e}")
 
-    # send emial notifications
+    # Send Emails (If not already handled by webhook)
     try:
         from .emails import send_artist_order_notification, send_order_confirmation
-
-        #send confirmation to customer
         send_order_confirmation(order)
-
-        #send notifications to artist
-        for item in order.itmes.all():
+        for item in order.items.all(): 
             send_artist_order_notification(item)
-
     except Exception as e:
-        print(f'email sending failed: {e}')
+        print(f'Email sending failed: {e}')
     
-    # Clear the order ID from session
-    if 'order_id' in request.session:
-        del request.session['order_id']
+    # Session Cleanup 
+    del request.session['order_id']
     
     messages.success(request, f'Payment completed successfully! Order #{order.order_number} is being processed.')
-    return redirect('order_created', order_number=order.order_number)  
-
+    return redirect('order_created', order_number=order.order_number)
 def payment_canceled(request):
     """
     Handle cancelled payment
@@ -444,7 +446,7 @@ def artist_sales_analytics(request):
         artwork__artist=request.user,
         order__paid=True
     ).aggregate(
-        total_revenue=Sum(models.F('price') * models.F('quantity')),
+        total_revenue=Sum(F('price') * F('quantity')),
         total_orders=Count('order', distinct=True),
         total_items=Sum('quantity'),
         avg_order_value=Avg(models.F('price') * models.F('quantity'))
