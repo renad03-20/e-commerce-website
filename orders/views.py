@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.views.generic import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import models
-from django.db.models import Sum, Count, Avg, F
+from django.db.models import Sum, Count, Avg, F, ExpressionWrapper, DecimalField
 from django.utils import timezone
 
 import stripe
@@ -440,26 +440,31 @@ def artist_sales_analytics(request):
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
     year_ago = today - timedelta(days=365)
-    
+
+    revenue_expr = ExpressionWrapper(
+    F('price') * F('quantity'),
+    output_field=DecimalField(max_digits=10, decimal_places=2)
+    )
+
     # Overall stats
     total_stats = OrderItem.objects.filter(
         artwork__artist=request.user,
         order__paid=True
     ).aggregate(
-        total_revenue=Sum(F('price') * F('quantity')),
+        total_revenue=Sum(F(revenue_expr)),
         total_orders=Count('order', distinct=True),
         total_items=Sum('quantity'),
-        avg_order_value=Avg(models.F('price') * models.F('quantity'))
+        avg_order_value=Avg(revenue_expr)
     )
     
     # Time-based stats
     recent_stats = {
-        'week': OrderItem.objects.filter(
-            artwork__artist=request.user,
-            order__paid=True,
-            order__created__gte=week_ago
+    'week': OrderItem.objects.filter(
+        artwork__artist=request.user,
+        order__paid=True,
+        order__created__gte=week_ago
         ).aggregate(
-            revenue=Sum(models.F('price') * models.F('quantity')),
+            revenue=Sum(revenue_expr),
             orders=Count('order', distinct=True)
         ),
         'month': OrderItem.objects.filter(
@@ -467,34 +472,34 @@ def artist_sales_analytics(request):
             order__paid=True,
             order__created__gte=month_ago
         ).aggregate(
-            revenue=Sum(models.F('price') * models.F('quantity')),
+            revenue=Sum(revenue_expr),
             orders=Count('order', distinct=True)
         ),
     }
     
     # Monthly revenue for chart
     monthly_revenue = OrderItem.objects.filter(
-        artwork__artist=request.user,
-        order__paid=True,
-        order__created__gte=year_ago
+    artwork__artist=request.user,
+    order__paid=True,
+    order__created__gte=year_ago
     ).extra({
         'month': "strftime('%%Y-%%m', orders_order.created)"
     }).values('month').annotate(
-        revenue=Sum(models.F('price') * models.F('quantity'))
+        revenue=Sum(revenue_expr)
     ).order_by('month')
-    
+
     # Top performing artworks
     top_artworks = OrderItem.objects.filter(
-        artwork__artist=request.user,
-        order__paid=True
+    artwork__artist=request.user,
+    order__paid=True
     ).values(
         'artwork__title', 'artwork__id', 'artwork__image'
     ).annotate(
         total_sold=Sum('quantity'),
-        total_revenue=Sum(models.F('price') * models.F('quantity')),
+        total_revenue=Sum(revenue_expr),
         order_count=Count('order', distinct=True)
     ).order_by('-total_revenue')[:10]
-    
+
     context = {
         'total_stats': total_stats,
         'recent_stats': recent_stats,
