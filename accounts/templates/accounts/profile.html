@@ -11,6 +11,12 @@
     <div class="profile-card">
         <h2><i class="fa-solid fa-user"></i> Personal Information</h2>
         <div class="info-grid">
+            {% if user.groups.filter.name == 'Artists' %}
+                <div class="artist-cta">
+                    <p>Want to manage your listings or view sales?</p>
+                    <a href="{% url 'artist_dashboard' %}" class="btn btn-success">Switch to Artist Dashboard</a>
+                </div>
+            {% endif %}
             <div class="info-item">
                 <label>Username:</label>
                 <span>{{ user.username }}</span>
