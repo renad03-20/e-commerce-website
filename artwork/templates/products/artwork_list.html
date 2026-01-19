@@ -27,7 +27,7 @@
         {% for artwork in artworks %}
         <div class="artwork-item">
             <a href="{% url 'artwork_detail' artwork.pk %}">
-                <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}">
+                <img src="{{ artwork.thumbnail.url }}" alt="{{ artwork.title }}" loading="lazy">
                 <h3>{{ artwork.title }}</h3>
                 <p class="artist">By {{ artwork.artist.username }}</p>
                 <p class="price">${{ artwork.price }}</p>
