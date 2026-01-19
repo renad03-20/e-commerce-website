@@ -1,4 +1,6 @@
 from django.db import models
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFill
 
 # Create your models here.
 class Category(models.Model):
@@ -25,6 +27,18 @@ class Artwork(models.Model):
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to='artwork/')
+    
+    # what the gallery will load
+    thumbnail = ImageSpecField(source='image', 
+                               processors=[ResizeToFill(300,300)],
+                               format='JPEG',
+                               options={'quality': 70})
+    
+    # for the detail page 
+    thumbnail = ImageSpecField(source='image', 
+                               processors=[ResizeToFill(800,800)],
+                               format='JPEG',
+                               options={'quality': 70})
     
     # Relationships
     artist = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='artworks')
