@@ -389,3 +389,9 @@
         border: 2px solid var(--dark-gray);
     }
 }
+.artwork-card img{
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    background-color: #f0f0f0;
+}
