@@ -30,8 +30,17 @@ def artwork_list(request):
 
 def artwork_detail(request, pk):
     artwork = get_object_or_404(Artwork, pk=pk)
+    
+    if artwork.category:
+        interests = request.session.get('interests', {})
+        category_id = str(artwork.category.id)
+        # Increment the "score" for this category
+        interests[category_id] = interests.get(category_id, 0) + 1
+        request.session['interests'] = interests
+    
     context = {
         'artwork': artwork,
+        'related_artworks': Artwork.objects.filter(category=artwork.category).exclude(pk=pk)[:4]
     }
     return render(request, 'products/artwork_detail.html', context)
 
