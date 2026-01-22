@@ -7,13 +7,32 @@ from django.contrib import messages
 from .forms import CustomUserCreationForm
 
 def home(request):
-    #! getting tandom artwork to feature in the home page
-    featured_artwork = Artwork.objects.filter(stock__gt=0).order_by('?')[:4]
-    categories = Category.objects.all()[:4] #! Corrected variable name
+    interests = request.session.get('interests', {})
+    categories = Category.objects.all()
+    
+    if interests:
+        # Find the category ID with the highest score
+        most_liked_category_id = max(interests, key=interests.get)
+        
+        # Pull art from that category first
+        featured_artwork = Artwork.objects.filter(
+            category_id=most_liked_category_id, 
+            stock__gt=0
+        ).order_by('?')[:4]
+        
+        # If they haven't seen enough of that category, fill the rest with random art
+        if featured_artwork.count() < 4:
+            additional = Artwork.objects.filter(stock__gt=0).exclude(
+                category_id=most_liked_category_id
+            ).order_by('?')[:4 - featured_artwork.count()]
+            featured_artwork = list(featured_artwork) + list(additional)
+    else:
+        # Fallback for new users (Level 3: Trending/Random)
+        featured_artwork = Artwork.objects.filter(stock__gt=0).order_by('?')[:4]
 
     context = {
         'featured_artwork': featured_artwork,
-        'categories': categories, #! Use lowercase variable in the context
+        'categories': categories[:4],
     }
     return render(request, "pages/home.html", context)
 
