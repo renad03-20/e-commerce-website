@@ -10,7 +10,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db import models
 from django.db.models import Sum, Count, Avg, F, ExpressionWrapper, DecimalField
 from django.utils import timezone
-
+from django.db.models.functions import TruncMonth, Coalesce
+from decimal import Decimal
 import stripe
 import json
 from datetime import datetime, timedelta
@@ -288,54 +289,62 @@ def payment_canceled(request):
 
 @login_required
 def artist_orders_dashboard(request):
-    """
-    Comprehensive artist order dashboard
-    """
-    # Get orders containing this artist's artworks
-    orders = Order.objects.filter(
-        items__artwork__artist=request.user
-    ).distinct().order_by('-created')
-    
-    # Calculate statistics
+    orders = (
+        Order.objects
+        .filter(items__artwork__artist=request.user)
+        .distinct()
+        .order_by('-created')
+    )
+
     total_orders = orders.count()
-    
-    # Status breakdown
-    status_counts = orders.values('status').annotate(count=models.Count('id'))
-    
-    # Last 30 days sales
-    thirty_days_ago = datetime.now() - timedelta(days=30)
+
+    status_counts = orders.values('status').annotate(
+        count=Count('id')
+    )
+
+    revenue_expr = ExpressionWrapper(
+        F('price') * F('quantity'),
+        output_field=DecimalField(max_digits=12, decimal_places=2)
+    )
+
+    thirty_days_ago = timezone.localdate() - timezone.timedelta(days=30)
+
     recent_sales = OrderItem.objects.filter(
         artwork__artist=request.user,
         order__paid=True,
         order__created__gte=thirty_days_ago
     ).aggregate(
-        total_revenue=Sum('price' * models.F('quantity')),
-        total_items=Sum('quantity')
+        total_revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
+        total_items=Coalesce(Sum('quantity'), 0)
     )
-    
-    # Monthly sales data for chart
-    monthly_sales = OrderItem.objects.filter(
-        artwork__artist=request.user,
-        order__paid=True,
-        order__created__gte=datetime.now() - timedelta(days=365)
-    ).extra({
-        'month': "strftime('%%Y-%%m', orders_order.created)"
-    }).values('month').annotate(
-        revenue=Sum(models.F('price') * models.F('quantity')),
-        orders=Count('order', distinct=True)
-    ).order_by('month')
-    
-    # Best selling artworks
-    best_sellers = OrderItem.objects.filter(
-        artwork__artist=request.user,
-        order__paid=True
-    ).values(
-        'artwork__title', 'artwork__id'
-    ).annotate(
-        total_sold=Sum('quantity'),
-        total_revenue=Sum(models.F('price') * models.F('quantity'))
-    ).order_by('-total_sold')[:5]
-    
+
+    monthly_sales = (
+        OrderItem.objects.filter(
+            artwork__artist=request.user,
+            order__paid=True,
+            order__created__gte=timezone.localdate() - timezone.timedelta(days=365)
+        )
+        .annotate(month=TruncMonth('order__created'))
+        .values('month')
+        .annotate(
+            revenue=Coalesce(Sum(revenue_expr), Decimal("0.00"))
+        )
+        .order_by('month')
+    )
+
+    best_sellers = (
+        OrderItem.objects.filter(
+            artwork__artist=request.user,
+            order__paid=True
+        )
+        .values('artwork__title', 'artwork__id')
+        .annotate(
+            total_sold=Coalesce(Sum('quantity'), 0),
+            total_revenue=Coalesce(Sum(revenue_expr), Decimal("0.00"))
+        )
+        .order_by('-total_sold')[:5]
+    )
+
     context = {
         'orders': orders,
         'total_orders': total_orders,
@@ -344,6 +353,7 @@ def artist_orders_dashboard(request):
         'monthly_sales': list(monthly_sales),
         'best_sellers': best_sellers,
     }
+
     return render(request, 'orders/artist_orders_dashboard.html', context)
 
 @login_required
@@ -432,9 +442,6 @@ def artist_sales_analytics(request):
     """
     Detailed sales analytics for artists
     """
-    from django.db.models import Sum, Count, Avg
-    from datetime import datetime, timedelta
-    
     # Time periods
     today = datetime.now().date()
     week_ago = today - timedelta(days=7)
@@ -443,7 +450,7 @@ def artist_sales_analytics(request):
 
     revenue_expr = ExpressionWrapper(
     F('price') * F('quantity'),
-    output_field=DecimalField(max_digits=10, decimal_places=2)
+    output_field=DecimalField(max_digits=12, decimal_places=2)
     )
 
     # Overall stats
@@ -451,10 +458,10 @@ def artist_sales_analytics(request):
         artwork__artist=request.user,
         order__paid=True
     ).aggregate(
-        total_revenue=Sum(F(revenue_expr)),
+        total_revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
         total_orders=Count('order', distinct=True),
-        total_items=Sum('quantity'),
-        avg_order_value=Avg(revenue_expr)
+        total_items=Coalesce(Sum('quantity'), 0),
+        avg_order_value=Coalesce(Avg(revenue_expr), Decimal("0.00")),
     )
     
     # Time-based stats
@@ -464,7 +471,7 @@ def artist_sales_analytics(request):
         order__paid=True,
         order__created__gte=week_ago
         ).aggregate(
-            revenue=Sum(revenue_expr),
+            revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
             orders=Count('order', distinct=True)
         ),
         'month': OrderItem.objects.filter(
@@ -472,7 +479,7 @@ def artist_sales_analytics(request):
             order__paid=True,
             order__created__gte=month_ago
         ).aggregate(
-            revenue=Sum(revenue_expr),
+            revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
             orders=Count('order', distinct=True)
         ),
     }
@@ -482,10 +489,10 @@ def artist_sales_analytics(request):
     artwork__artist=request.user,
     order__paid=True,
     order__created__gte=year_ago
-    ).extra({
-        'month': "strftime('%%Y-%%m', orders_order.created)"
-    }).values('month').annotate(
-        revenue=Sum(revenue_expr)
+    ).annotate(
+        month=TruncMonth('order__created')
+    ).values('month').annotate(
+        revenue=Coalesce(Sum(revenue_expr), Decimal("0.00"))
     ).order_by('month')
 
     # Top performing artworks
@@ -495,8 +502,8 @@ def artist_sales_analytics(request):
     ).values(
         'artwork__title', 'artwork__id', 'artwork__image'
     ).annotate(
-        total_sold=Sum('quantity'),
-        total_revenue=Sum(revenue_expr),
+        total_sold=Coalesce(Sum('quantity'), 0),
+        total_revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
         order_count=Count('order', distinct=True)
     ).order_by('-total_revenue')[:10]
 
