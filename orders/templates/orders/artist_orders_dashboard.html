@@ -52,7 +52,7 @@
             <div class="dashboard-section">
                 <div class="section-header">
                     <h2>Recent Orders</h2>
-                    <a href="{% url 'orders:artist_sales_analytics' %}" class="btn btn-outline">View Analytics</a>
+                    <a href="{% url 'artist_sales_analytics' %}" class="btn btn-outline">View Analytics</a>
                 </div>
 
                 {% if orders %}
@@ -93,7 +93,7 @@
                             </span>
                         </div>
                         <div class="col-actions">
-                            <a href="{% url 'orders:artist_order_detail' order.order_number %}" 
+                            <a href="{% url 'artist_order_detail' order.order_number %}" 
                                class="btn-view">Manage</a>
                         </div>
                     </div>
