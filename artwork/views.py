@@ -183,3 +183,32 @@ def artist_dashboard(request):
         'artist_order_items': artist_order_items,
     }
     return render(request, 'products/artist_dashboard.html', context)
+
+@login_required
+def usesr_view_of_artist(request):
+    #! Get artist's artworks
+    artworks = Artwork.objects.filter(artist=request.user).order_by('-created_at')
+
+    artist_order_items = OrderItem.objects.filter(artwork__artist=request.user)
+
+    #! Best selling artwork
+    best_selling = artist_order_items.values('artwork__title').annotate(
+        total_sold=Sum('quantity')
+    ).order_by('-total_sold').first()
+
+    best_selling_artwork = None
+    if best_selling:
+        best_selling_artwork = Artwork.objects.filter(
+            title=best_selling['artwork__title'],
+            artist=request.user
+        ).first()
+
+    artist_artwork = artworks
+
+    context = {
+    artworks:artworks,
+    artist_order_items:artist_order_items,
+    artist_artwork: artist_artwork,
+    best_selling_artwork:best_selling_artwork,
+    }
+    return render(request, 'products/artist_dashboard.html', context)
