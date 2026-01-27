@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
 from django.contrib import messages
 from .models import Artwork, Category, Tag
 from .forms import ArtworkForm
@@ -185,30 +186,30 @@ def artist_dashboard(request):
     return render(request, 'products/artist_dashboard.html', context)
 
 @login_required
-def usesr_view_of_artist(request):
-    #! Get artist's artworks
-    artworks = Artwork.objects.filter(artist=request.user).order_by('-created_at')
+def user_view_of_artist(request, artist_id):
+    artist = User.objects.get(id=artist_id)
 
-    artist_order_items = OrderItem.objects.filter(artwork__artist=request.user)
+    artworks = Artwork.objects.filter(
+        artist=artist
+    ).order_by('-created_at')
 
-    #! Best selling artwork
-    best_selling = artist_order_items.values('artwork__title').annotate(
+    artist_order_items = OrderItem.objects.filter(
+        artwork__artist=artist
+    )
+
+    best_selling = artist_order_items.values(
+        'artwork'
+    ).annotate(
         total_sold=Sum('quantity')
     ).order_by('-total_sold').first()
 
     best_selling_artwork = None
     if best_selling:
-        best_selling_artwork = Artwork.objects.filter(
-            title=best_selling['artwork__title'],
-            artist=request.user
-        ).first()
-
-    artist_artwork = artworks
+        best_selling_artwork = Artwork.objects.get(id=best_selling['artwork'])
 
     context = {
-    artworks:artworks,
-    artist_order_items:artist_order_items,
-    artist_artwork: artist_artwork,
-    best_selling_artwork:best_selling_artwork,
+        'artist': artist,
+        'artworks': artworks,
+        'best_selling_artwork': best_selling_artwork,
     }
-    return render(request, 'products/artist_dashboard.html', context)
+    return render(request, 'products/user_view_of_artist.html', context)
