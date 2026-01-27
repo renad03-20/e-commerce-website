@@ -52,9 +52,10 @@
                             <i class="fa-solid fa-cart-plus"></i> Add to Cart
                         </button>
                     </form>
-                        <button type="submit" class="btn btn-primary add-to-cart-btn">
-                             check artist account
-                        </button>
+                    <a href="{% url 'user_view_of_artist' artwork.artist.id %}"
+                        class="btn btn-primary">
+                        Check artist account
+                    </a>
                 </div>
             {% else %}
                 <div class="out-of-stock">
