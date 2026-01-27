@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/user_view_of_artist.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="artist-header">
+    <div class="container"> 
+        <h1 class="display-4">Artworks by {{ artworks.0.artist.username }}</h1>
+        <p class="lead text-muted">Explore the full collection and creative journey of this artist.</p>
+    </div>
+</div>
+
+<div class="container">
+    {% if best_selling_artwork %}
+    <div class="best-seller-section">
+        <div class="best-seller-img" style="flex: 1; max-width: 400px;">
+            <img src="{{ best_selling_artwork.image.url }}" alt="Best Seller">
+        </div>
+        <div class="best-seller-info" style="flex: 2;">
+            <span class="best-seller-badge"><i class="fa-solid fa-crown"></i> Collector's Favorite</span>
+            <h2 class="display-6">{{ best_selling_artwork.title }}</h2>
+            <p class="text-muted">{{ best_selling_artwork.description|truncatewords:40 }}</p>
+            <p class="h3 mb-4">${{ best_selling_artwork.price }}</p>
+            <a href="{% url 'artwork_detail' best_selling_artwork.pk %}" class="btn btn-dark btn-lg px-5">View Masterpiece</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3">Full Collection</h2>
+        <span class="text-muted">{{ artworks.count }} Pieces</span>
+    </div>
+
+    <div class="artwork-grid">
+        {% for artwork in artworks %}
+        <div class="artwork-card">
+            <div class="card-img">
+                <a href="{% url 'artwork_detail' artwork.pk %}">
+                    <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}" loading="lazy">
+                </a>
+            </div>
+            <div class="p-4">
+                <h6 class="mb-2">{{ artwork.title }}</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="pricing">${{ artwork.price }}</span>
+                    <a href="{% url 'cart:add_to_cart' artwork.id %}" class="add-to-cart-btn">
+                        <i class="fa-solid fa-cart-plus"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <p class="lead">This artist hasn't uploaded any artworks yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
