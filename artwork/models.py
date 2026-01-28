@@ -1,6 +1,8 @@
 from django.db import models
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFill
+from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 
 # Create your models here.
 class Category(models.Model):
@@ -48,6 +50,33 @@ class Artwork(models.Model):
     # Extra data
     stock = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class CustomRequest(models.Model):
+    STATUS = [
+        ('R', _('Requested')),
+        ('A', _('Accepted')),
+        ('D', _('Declined')),
+        ('P', _('In Progress')),
+        ('C', _('Completed'))
+    ]
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='sent_requests'
+    )
+    receiver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='received_requests'
+    )
+ 
+    reference_image = models.ImageField(upload_to='user_image_ref/')
+    requirements = models.TextField(max_length=600)
+    status = models.CharField(max_length=1, choices=STATUS, default="R")
+    reason_for_declined = models.TextField(max_length=500, blank=True, null=True)
+    54 = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     
+    created_at = models.DateTimeField(auto_now_add=True) # Good for sorting
+
     def __str__(self):
         return self.title
