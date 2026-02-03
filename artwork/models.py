@@ -74,9 +74,8 @@ class CustomRequest(models.Model):
     requirements = models.TextField(max_length=600)
     status = models.CharField(max_length=1, choices=STATUS, default="R")
     reason_for_declined = models.TextField(max_length=500, blank=True, null=True)
-    54 = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True) # Good for sorting
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return self.title
