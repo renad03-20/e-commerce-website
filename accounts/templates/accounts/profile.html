@@ -132,5 +132,24 @@
         </div>
         {% endif %}
     </div>
+    <div class="card mb-4 border-primary">
+    <div class="card-body">
+        <h5 class="card-title"><i class="fa-solid fa-palette"></i> Artist Settings</h5>
+        <p class="text-muted small">Toggle this to show or hide the "Request Commission" form on your public gallery.</p>
+        
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-check form-switch mb-3">
+                {{ commission_form.is_available_for_commissions }}
+                <label class="form-check-label" for="{{ commission_form.is_available_for_commissions.id_for_label }}">
+                    Open for Custom Commissions
+                </label>
+            </div>
+            <button type="submit" name="update_commission" class="btn btn-primary btn-sm">
+                Save Availability
+            </button>
+        </form>
+    </div>
+    </div>
 </div>
 {% endblock %}
