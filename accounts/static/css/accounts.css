@@ -624,6 +624,18 @@ select.form-control {
     cursor: pointer;
 }
 
+/* Custom Toggle Switch Style */
+.form-check-input:checked {
+    background-color: #28a745; /* Success green when on */
+    border-color: #28a745;
+}
+
+.form-switch .form-check-input {
+    width: 3em;
+    height: 1.5em;
+    cursor: pointer;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .accounts-layout {
