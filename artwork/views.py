@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
 from .models import Artwork, Category, Tag
-from .forms import ArtworkForm
+from .forms import ArtworkForm, CustomRequestForm
 from cart.models import CartItem
 from orders.models import OrderItem
 from django.db.models import Sum, Count
@@ -187,11 +187,29 @@ def artist_dashboard(request):
 
 @login_required
 def user_view_of_artist(request, artist_id):
-    artist = User.objects.get(id=artist_id)
+    artist = get_object_or_404(User, id=artist_id)
 
     artworks = Artwork.objects.filter(
         artist=artist
     ).order_by('-created_at')
+
+    # check user profile for commission availability 
+    artist_profile = getattr(artist, 'userprofile', None)
+
+    form = CustomRequestForm()
+    if request.method == 'POST' and 'submit_commission' in request.POST:
+        form = CustomRequestForm(request.POST, request.FILES)
+        commission = form.save(commit= False)
+        #assign roles:
+        commission.sender = request.user
+        commission.receiver = artist
+        commission.save()
+
+        messages.success()
+
+        messages.success(request, f"Your request has been sent to {artist.username}!")
+        return redirect('user_view_of_artist', artist_id=artist_id)
+
 
     artist_order_items = OrderItem.objects.filter(
         artwork__artist=artist
@@ -208,6 +226,8 @@ def user_view_of_artist(request, artist_id):
         best_selling_artwork = Artwork.objects.get(id=best_selling['artwork'])
 
     context = {
+        'form': form,
+        'artist_profile': artist_profile,
         'artist': artist,
         'artworks': artworks,
         'best_selling_artwork': best_selling_artwork,
