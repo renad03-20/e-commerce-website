@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import UserProfile, Address
-from .forms import UserProfileForm, AddressForm
+from .forms import UserProfileForm, AddressForm, CommissionStatusForm
 from orders.models import Order
 
 @login_required
@@ -12,6 +12,16 @@ def profile(request):
         profile = request.user.userprofile
     except UserProfile.DoesNotExist:
         profile = UserProfile.objects.create(user=request.user)
+
+    # Handle the commission toggle form
+    if request.method == 'POST' and 'update_commission' in request.POST:
+        commission_form = CommissionStatusForm(request.POST, instance=profile)
+        if commission_form.is_valid():
+            commission_form.save()
+            messages.success(request, "Commission status updated!")
+            return redirect('accounts:profile') 
+    else:
+        commission_form = CommissionStatusForm(instance=profile)
     
     # Get user's recent orders
     recent_orders = Order.objects.filter(user=request.user).order_by('-created')[:5]
