@@ -21,3 +21,11 @@ class AddressForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].widget.attrs.update({'class': 'form-control'})
+
+class CommissionStatusForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['is_available_for_commissions']
+        labels = {
+            'is_available_for_commissions': 'Available for commissions'
+        }
