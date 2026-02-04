@@ -58,5 +58,20 @@
         <p>This artist hasn't uploaded any artworks yet.</p>
         {% endfor %}
     </div>
+
+</div>
+<div class="custom-commission-container">
+    {% if artist_profile.is_available_for_commissions %}
+        <section class="commission-section mt-5 p-4 bg-light rounded">
+            <h3>Request a Custom Piece from {{ artist.username }}</h3>
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" name="submit_commission" class="btn btn-success">
+                    Send Request
+                </button>
+            </form>
+        </section>
+    {% endif %}
 </div>
 {% endblock %}
