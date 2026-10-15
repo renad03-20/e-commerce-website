@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Commissions - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/commissions.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="commissions-container">
+    <div class="container">
+        <div class="commissions-header">
+            <h1>Commissions</h1>
+            <p class="text-muted">Track requests you sent and manage requests from buyers.</p>
+        </div>
+
+        <section class="commissions-section">
+            <h2>Requests You Sent</h2>
+            <div class="commissions-grid">
+                {% for commission in sent_commissions %}
+                <a class="commission-card" href="{% url 'commission_detail' commission.id %}">
+                    <div class="commission-meta">
+                        <span class="status-badge status-{{ commission.status }}">{{ commission.get_status_display }}</span>
+                        <span class="timestamp">{{ commission.created_at|date:"M j, Y" }}</span>
+                    </div>
+                    <h3>{{ commission.title }}</h3>
+                    <p>Artist: {{ commission.receiver.username }}</p>
+                    <p>Price: {% if commission.price %}${{ commission.price }}{% else %}TBD{% endif %}</p>
+                </a>
+                {% empty %}
+                <div class="empty-state">
+                    <p>You haven't sent any commission requests yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="commissions-section">
+            <h2>Requests For You</h2>
+            <div class="commissions-grid">
+                {% for commission in received_commissions %}
+                <a class="commission-card" href="{% url 'commission_detail' commission.id %}">
+                    <div class="commission-meta">
+                        <span class="status-badge status-{{ commission.status }}">{{ commission.get_status_display }}</span>
+                        <span class="timestamp">{{ commission.created_at|date:"M j, Y" }}</span>
+                    </div>
+                    <h3>{{ commission.title }}</h3>
+                    <p>Buyer: {{ commission.sender.username }}</p>
+                    <p>Budget: {% if commission.budget %}${{ commission.budget }}{% else %}Open{% endif %}</p>
+                </a>
+                {% empty %}
+                <div class="empty-state">
+                    <p>No commission requests yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

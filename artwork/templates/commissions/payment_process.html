@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Commission Payment - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/commissions.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="commission-payment">
+    <div class="container">
+        <h1>Complete Your Commission Payment</h1>
+        <div class="payment-card">
+            <h2>{{ commission.title }}</h2>
+            <p>Artist: {{ commission.receiver.username }}</p>
+            <p>Total: <strong>${{ commission.price }}</strong></p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">Pay with Stripe</button>
+            </form>
+            <p class="text-muted">You will be redirected to Stripe to complete the payment securely.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

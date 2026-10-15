@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Commission - {{ commission.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/commissions.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="commission-detail">
+    <div class="container">
+        <div class="commission-header">
+            <div>
+                <h1>{{ commission.title }}</h1>
+                <p class="text-muted">Commission #{{ commission.id }}</p>
+            </div>
+            <span class="status-badge status-{{ commission.status }}">{{ commission.get_status_display }}</span>
+        </div>
+
+        <div class="commission-summary">
+            <div class="summary-card">
+                <h3>Summary</h3>
+                <p><strong>Buyer:</strong> {{ commission.sender.username }}</p>
+                <p><strong>Artist:</strong> {{ commission.receiver.username }}</p>
+                <p><strong>Budget:</strong> {% if commission.budget %}${{ commission.budget }}{% else %}Open{% endif %}</p>
+                <p><strong>Price:</strong> {% if commission.price %}${{ commission.price }}{% else %}TBD{% endif %}</p>
+                <p><strong>Desired deadline:</strong> {% if commission.desired_deadline %}{{ commission.desired_deadline|date:"M j, Y" }}{% else %}Not specified{% endif %}</p>
+                <p><strong>Artist deadline:</strong> {% if commission.artist_deadline %}{{ commission.artist_deadline|date:"M j, Y" }}{% else %}Not set{% endif %}</p>
+                <p><strong>Revisions:</strong> {{ commission.revision_count }} of {{ commission.revision_limit }}</p>
+            </div>
+            <div class="summary-card">
+                <h3>Request Details</h3>
+                <p>{{ commission.requirements }}</p>
+                {% if commission.reference_image %}
+                <div class="reference-image">
+                    <img src="{{ commission.reference_image.url }}" alt="Reference">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if commission.reason_for_declined %}
+        <div class="alert alert-warning">Decline reason: {{ commission.reason_for_declined }}</div>
+        {% endif %}
+        {% if commission.cancel_reason %}
+        <div class="alert alert-warning">Cancel reason: {{ commission.cancel_reason }}</div>
+        {% endif %}
+
+        <div class="commission-actions">
+            {% if is_artist and commission.status == status_requested %}
+            <div class="action-card">
+                <h3>Accept Request</h3>
+                <form method="post" action="{% url 'commission_accept' commission.id %}">
+                    {% csrf_token %}
+                    {{ accept_form.as_p }}
+                    <button type="submit" class="btn btn-success">Accept & Request Payment</button>
+                </form>
+            </div>
+            <div class="action-card">
+                <h3>Decline Request</h3>
+                <form method="post" action="{% url 'commission_decline' commission.id %}">
+                    {% csrf_token %}
+                    {{ decline_form.as_p }}
+                    <button type="submit" class="btn btn-outline-danger">Decline</button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if is_buyer and commission.status == status_awaiting_payment %}
+            <div class="action-card">
+                <h3>Complete Payment</h3>
+                <p>The artist accepted your commission. Pay to begin the project.</p>
+                <form method="post" action="{% url 'commission_payment_start' commission.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">Pay ${% if commission.price %}{{ commission.price }}{% else %}0.00{% endif %}</button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if is_artist and commission.status == status_in_progress %}
+            <div class="action-card">
+                <h3>Send Delivery</h3>
+                <form method="post" enctype="multipart/form-data" action="{% url 'commission_delivery' commission.id %}">
+                    {% csrf_token %}
+                    {{ delivery_form.as_p }}
+                    <button type="submit" class="btn btn-success">Send Delivery</button>
+                </form>
+            </div>
+            {% elif is_artist and commission.status == status_revision_requested %}
+            <div class="action-card">
+                <h3>Send Revised Delivery</h3>
+                <form method="post" enctype="multipart/form-data" action="{% url 'commission_delivery' commission.id %}">
+                    {% csrf_token %}
+                    {{ delivery_form.as_p }}
+                    <button type="submit" class="btn btn-success">Send Revision</button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if is_buyer and commission.status == status_delivered %}
+            <div class="action-card">
+                <h3>Approve or Request Changes</h3>
+                <form method="post" action="{% url 'commission_mark_complete' commission.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Mark Complete</button>
+                </form>
+                {% if commission.can_request_revision %}
+                <form method="post" action="{% url 'commission_revision_request' commission.id %}">
+                    {% csrf_token %}
+                    {{ revision_form.as_p }}
+                    <button type="submit" class="btn btn-outline-primary">Request Revision</button>
+                </form>
+                {% else %}
+                <p class="text-muted">You have reached the revision limit.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if commission.status != status_completed and commission.status != status_declined and commission.status != status_canceled %}
+            <div class="action-card">
+                <h3>Cancel Commission</h3>
+                <form method="post" action="{% url 'commission_cancel' commission.id %}">
+                    {% csrf_token %}
+                    {{ cancel_form.as_p }}
+                    <button type="submit" class="btn btn-outline-danger">Cancel</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="commission-thread">
+            <div class="thread-column">
+                <h3>Messages</h3>
+                <div class="thread-list">
+                    {% for message in messages %}
+                    <div class="thread-message {% if message.sender == user %}self{% endif %}">
+                        <div class="thread-meta">
+                            <strong>{{ message.sender.username }}</strong>
+                            <span>{{ message.created_at|date:"M j, Y H:i" }}</span>
+                        </div>
+                        <p>{{ message.body }}</p>
+                        {% if message.attachment %}
+                        <a href="{{ message.attachment.url }}" class="link">Download attachment</a>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No messages yet.</p>
+                    {% endfor %}
+                </div>
+                <form method="post" enctype="multipart/form-data" action="{% url 'commission_message' commission.id %}">
+                    {% csrf_token %}
+                    {{ message_form.as_p }}
+                    <button type="submit" class="btn btn-dark">Send Message</button>
+                </form>
+            </div>
+
+            <div class="thread-column">
+                <h3>Deliveries</h3>
+                <div class="thread-list">
+                    {% for delivery in deliveries %}
+                    <div class="thread-message">
+                        <div class="thread-meta">
+                            <strong>{{ delivery.delivered_by.username }}</strong>
+                            <span>{{ delivery.created_at|date:"M j, Y H:i" }}</span>
+                        </div>
+                        {% if delivery.message %}
+                        <p>{{ delivery.message }}</p>
+                        {% endif %}
+                        {% if delivery.delivery_file %}
+                        <a href="{{ delivery.delivery_file.url }}" class="link">Download file</a>
+                        {% endif %}
+                        {% if delivery.external_link %}
+                        <a href="{{ delivery.external_link }}" class="link" target="_blank" rel="noopener">Open link</a>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No deliveries yet.</p>
+                    {% endfor %}
+                </div>
+
+                <h3>Revisions</h3>
+                <div class="thread-list">
+                    {% for revision in revisions %}
+                    <div class="thread-message">
+                        <div class="thread-meta">
+                            <strong>{{ revision.requested_by.username }}</strong>
+                            <span>{{ revision.created_at|date:"M j, Y H:i" }}</span>
+                        </div>
+                        <p>{{ revision.message }}</p>
+                        {% if revision.resolved_at %}
+                        <span class="text-muted">Resolved {{ revision.resolved_at|date:"M j, Y H:i" }}</span>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No revision requests yet.</p>
+                    {% endfor %}
+                </div>
+
+                <h3>Status History</h3>
+                <div class="thread-list">
+                    {% for entry in status_history %}
+                    <div class="thread-message">
+                        <div class="thread-meta">
+                            <strong>{{ entry.to_status|capfirst }}</strong>
+                            <span>{{ entry.created_at|date:"M j, Y H:i" }}</span>
+                        </div>
+                        {% if entry.note %}
+                        <p>{{ entry.note }}</p>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No status changes yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

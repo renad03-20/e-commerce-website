@@ -37,7 +37,52 @@ def stripe_webhook(request):
     # Handle the checkout.session.completed event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
+        metadata = session.get('metadata', {}) or {}
+        commission_id = metadata.get('commission_id')
+
+        if commission_id:
+            try:
+                from artwork.models import CustomRequest, CommissionStatusHistory
+
+                commission = CustomRequest.objects.get(id=commission_id)
+                if not commission.paid_at:
+                    commission.paid_at = timezone.now()
+                    commission.stripe_payment_intent_id = session.get('payment_intent', '')
+                    CommissionStatusHistory.objects.create(
+                        commission=commission,
+                        from_status=commission.status,
+                        to_status=CustomRequest.STATUS_IN_PROGRESS,
+                        changed_by=None,
+                        note='Payment confirmed via Stripe webhook.',
+                    )
+                    commission.status = CustomRequest.STATUS_IN_PROGRESS
+                    commission.save()
+            except CustomRequest.DoesNotExist:
+                return HttpResponse(status=404)
+            return HttpResponse(status=200)
+
         order_number = session.get('client_reference_id')
+        if order_number and order_number.startswith('commission:'):
+            try:
+                commission_id = order_number.split(':', 1)[1]
+                from artwork.models import CustomRequest, CommissionStatusHistory
+
+                commission = CustomRequest.objects.get(id=commission_id)
+                if not commission.paid_at:
+                    commission.paid_at = timezone.now()
+                    commission.stripe_payment_intent_id = session.get('payment_intent', '')
+                    CommissionStatusHistory.objects.create(
+                        commission=commission,
+                        from_status=commission.status,
+                        to_status=CustomRequest.STATUS_IN_PROGRESS,
+                        changed_by=None,
+                        note='Payment confirmed via Stripe webhook.',
+                    )
+                    commission.status = CustomRequest.STATUS_IN_PROGRESS
+                    commission.save()
+            except (CustomRequest.DoesNotExist, IndexError):
+                return HttpResponse(status=404)
+            return HttpResponse(status=200)
 
         if not order_number:
             return HttpResponse(status=400)

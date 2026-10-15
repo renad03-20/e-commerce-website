@@ -2,13 +2,32 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .models import Artwork, Category, Tag
-from .forms import ArtworkForm, CustomRequestForm
-from cart.models import CartItem
+from django.urls import reverse
+from .models import (
+    Artwork,
+    Category,
+    Tag,
+    CustomRequest,
+    CommissionMessage,
+    CommissionDelivery,
+    CommissionRevisionRequest,
+    CommissionStatusHistory,
+)
+from .forms import (
+    ArtworkForm,
+    CommissionRequestForm,
+    CommissionAcceptForm,
+    CommissionDeclineForm,
+    CommissionMessageForm,
+    CommissionDeliveryForm,
+    CommissionRevisionRequestForm,
+    CommissionCancelForm,
+)
 from orders.models import OrderItem
 from django.db.models import Sum, Count
 from django.utils import timezone
-from django.db.models import Count
+import stripe
+from django.conf import settings
 
 def is_artist(user):
     return user.groups.filter(name='Artists').exists() or user.is_superuser
@@ -196,19 +215,38 @@ def user_view_of_artist(request, artist_id):
     # check user profile for commission availability 
     artist_profile = getattr(artist, 'userprofile', None)
 
-    form = CustomRequestForm()
+    form = CommissionRequestForm()
     if request.method == 'POST' and 'submit_commission' in request.POST:
-        form = CustomRequestForm(request.POST, request.FILES)
-        commission = form.save(commit= False)
-        #assign roles:
-        commission.sender = request.user
-        commission.receiver = artist
-        commission.save()
+        if not artist_profile or not artist_profile.is_available_for_commissions:
+            messages.error(request, "This artist is not accepting commissions right now.")
+            return redirect('user_view_of_artist', artist_id=artist_id)
+        if request.user == artist:
+            messages.error(request, "You can't request a commission from yourself.")
+            return redirect('user_view_of_artist', artist_id=artist_id)
 
-        messages.success()
+        form = CommissionRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            commission = form.save(commit=False)
+            commission.sender = request.user
+            commission.receiver = artist
+            commission.status = CustomRequest.STATUS_REQUESTED
+            commission.save()
+            CommissionStatusHistory.objects.create(
+                commission=commission,
+                from_status='',
+                to_status=commission.status,
+                changed_by=request.user,
+                note='Commission request submitted.',
+            )
+            _notify_commission(
+                commission,
+                subject=f"New commission request from {request.user.username}",
+                message=f"You received a new commission request: {commission.title}.",
+                to_user=artist,
+            )
 
-        messages.success(request, f"Your request has been sent to {artist.username}!")
-        return redirect('user_view_of_artist', artist_id=artist_id)
+            messages.success(request, f"Your request has been sent to {artist.username}!")
+            return redirect('commission_detail', commission_id=commission.id)
 
 
     artist_order_items = OrderItem.objects.filter(
@@ -233,3 +271,430 @@ def user_view_of_artist(request, artist_id):
         'best_selling_artwork': best_selling_artwork,
     }
     return render(request, 'products/user_view_of_artist.html', context)
+
+
+def _commission_participant_guard(request, commission):
+    if not commission.is_participant(request.user):
+        messages.error(request, "You don't have permission to access this commission.")
+        return False
+    return True
+
+
+def _log_commission_status(commission, to_status, user=None, note=''):
+    CommissionStatusHistory.objects.create(
+        commission=commission,
+        from_status=commission.status or '',
+        to_status=to_status,
+        changed_by=user,
+        note=note,
+    )
+    commission.status = to_status
+
+
+def _notify_commission(commission, subject, message, to_user):
+    try:
+        from .emails import send_commission_email
+
+        send_commission_email(subject, message, getattr(to_user, 'email', None))
+    except Exception as exc:
+        print(f"Commission email error: {exc}")
+
+
+@login_required
+def commission_list(request):
+    sent_commissions = (
+        CustomRequest.objects.filter(sender=request.user)
+        .select_related('receiver')
+        .order_by('-created_at')
+    )
+    received_commissions = (
+        CustomRequest.objects.filter(receiver=request.user)
+        .select_related('sender')
+        .order_by('-created_at')
+    )
+
+    context = {
+        'sent_commissions': sent_commissions,
+        'received_commissions': received_commissions,
+    }
+    return render(request, 'commissions/commission_list.html', context)
+
+
+@login_required
+def commission_detail(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if not _commission_participant_guard(request, commission):
+        return redirect('commission_list')
+
+    context = {
+        'commission': commission,
+        'is_artist': request.user == commission.receiver,
+        'is_buyer': request.user == commission.sender,
+        'accept_form': CommissionAcceptForm(
+            initial={'price': commission.price, 'artist_deadline': commission.artist_deadline}
+        ),
+        'decline_form': CommissionDeclineForm(
+            initial={'reason_for_declined': commission.reason_for_declined}
+        ),
+        'message_form': CommissionMessageForm(),
+        'delivery_form': CommissionDeliveryForm(),
+        'revision_form': CommissionRevisionRequestForm(),
+        'cancel_form': CommissionCancelForm(),
+        'deliveries': commission.deliveries.all(),
+        'messages': commission.messages.select_related('sender').all(),
+        'revisions': commission.revisions.select_related('requested_by').all(),
+        'status_history': commission.status_history.select_related('changed_by').all(),
+        'status_requested': CustomRequest.STATUS_REQUESTED,
+        'status_awaiting_payment': CustomRequest.STATUS_AWAITING_PAYMENT,
+        'status_in_progress': CustomRequest.STATUS_IN_PROGRESS,
+        'status_delivered': CustomRequest.STATUS_DELIVERED,
+        'status_revision_requested': CustomRequest.STATUS_REVISION_REQUESTED,
+        'status_completed': CustomRequest.STATUS_COMPLETED,
+        'status_declined': CustomRequest.STATUS_DECLINED,
+        'status_canceled': CustomRequest.STATUS_CANCELED,
+    }
+    return render(request, 'commissions/commission_detail.html', context)
+
+
+@login_required
+def commission_message_create(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if not _commission_participant_guard(request, commission):
+        return redirect('commission_list')
+
+    if request.method == 'POST':
+        form = CommissionMessageForm(request.POST, request.FILES)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.commission = commission
+            message.sender = request.user
+            message.save()
+            messages.success(request, 'Message sent.')
+        else:
+            messages.error(request, 'Could not send message. Please check the form.')
+    return redirect('commission_detail', commission_id=commission_id)
+
+
+@login_required
+def commission_accept(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.receiver:
+        messages.error(request, "Only the artist can accept this commission.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if commission.status != CustomRequest.STATUS_REQUESTED:
+        messages.error(request, "This commission can no longer be accepted.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if request.method == 'POST':
+        form = CommissionAcceptForm(request.POST)
+        if form.is_valid():
+            commission.price = form.cleaned_data['price']
+            commission.artist_deadline = form.cleaned_data.get('artist_deadline')
+            commission.accepted_at = timezone.now()
+            _log_commission_status(
+                commission,
+                CustomRequest.STATUS_AWAITING_PAYMENT,
+                request.user,
+                note='Commission accepted. Awaiting payment.',
+            )
+            commission.save()
+
+            note = form.cleaned_data.get('note')
+            if note:
+                CommissionMessage.objects.create(
+                    commission=commission,
+                    sender=request.user,
+                    body=note,
+                )
+
+            _notify_commission(
+                commission,
+                subject=f"Commission accepted by {request.user.username}",
+                message=f"Your commission '{commission.title}' was accepted. Please complete payment to begin.",
+                to_user=commission.sender,
+            )
+
+            messages.success(request, 'Commission accepted. The buyer has been notified to pay.')
+        else:
+            messages.error(request, 'Please provide a valid price to accept.')
+    return redirect('commission_detail', commission_id=commission_id)
+
+
+@login_required
+def commission_decline(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.receiver:
+        messages.error(request, "Only the artist can decline this commission.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if commission.status != CustomRequest.STATUS_REQUESTED:
+        messages.error(request, "This commission can no longer be declined.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if request.method == 'POST':
+        form = CommissionDeclineForm(request.POST)
+        if form.is_valid():
+            commission.reason_for_declined = form.cleaned_data['reason_for_declined']
+            _log_commission_status(
+                commission,
+                CustomRequest.STATUS_DECLINED,
+                request.user,
+                note='Commission declined.',
+            )
+            commission.save()
+            _notify_commission(
+                commission,
+                subject=f"Commission declined by {request.user.username}",
+                message=f"Your commission '{commission.title}' was declined. Reason: {commission.reason_for_declined}",
+                to_user=commission.sender,
+            )
+            messages.info(request, 'Commission declined.')
+        else:
+            messages.error(request, 'Please provide a reason to decline.')
+    return redirect('commission_detail', commission_id=commission_id)
+
+
+@login_required
+def commission_cancel(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if not _commission_participant_guard(request, commission):
+        return redirect('commission_list')
+
+    if commission.status in [
+        CustomRequest.STATUS_COMPLETED,
+        CustomRequest.STATUS_DECLINED,
+        CustomRequest.STATUS_CANCELED,
+    ]:
+        messages.error(request, "This commission can't be canceled.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if request.method == 'POST':
+        form = CommissionCancelForm(request.POST)
+        if form.is_valid():
+            commission.cancel_reason = form.cleaned_data.get('cancel_reason', '')
+            commission.canceled_at = timezone.now()
+            _log_commission_status(
+                commission,
+                CustomRequest.STATUS_CANCELED,
+                request.user,
+                note='Commission canceled.',
+            )
+            commission.save()
+            target_user = commission.receiver if request.user == commission.sender else commission.sender
+            _notify_commission(
+                commission,
+                subject=f"Commission canceled by {request.user.username}",
+                message=f"The commission '{commission.title}' was canceled.",
+                to_user=target_user,
+            )
+            messages.info(request, 'Commission canceled.')
+        else:
+            messages.error(request, 'Please provide a valid cancellation note.')
+    return redirect('commission_detail', commission_id=commission_id)
+
+
+@login_required
+def commission_payment_start(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.sender:
+        messages.error(request, "Only the buyer can pay for this commission.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if commission.status != CustomRequest.STATUS_AWAITING_PAYMENT:
+        messages.error(request, "This commission isn't ready for payment.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if not commission.price:
+        messages.error(request, "The artist hasn't set a price yet.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    if request.method == 'POST':
+        success_url = request.build_absolute_uri(
+            reverse('commission_payment_completed', args=[commission.id])
+        )
+        cancel_url = request.build_absolute_uri(
+            reverse('commission_payment_canceled', args=[commission.id])
+        )
+
+        session = stripe.checkout.Session.create(
+            mode='payment',
+            client_reference_id=f'commission:{commission.id}',
+            success_url=success_url,
+            cancel_url=cancel_url,
+            line_items=[
+                {
+                    'price_data': {
+                        'unit_amount': int(commission.price * 100),
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': f'Custom commission: {commission.title}',
+                        },
+                    },
+                    'quantity': 1,
+                }
+            ],
+            metadata={'commission_id': str(commission.id), 'type': 'commission'},
+        )
+        commission.stripe_checkout_session_id = session.id
+        commission.save(update_fields=['stripe_checkout_session_id'])
+        return redirect(session.url, code=303)
+
+    return render(request, 'commissions/payment_process.html', {'commission': commission})
+
+
+@login_required
+def commission_payment_completed(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.sender:
+        messages.error(request, "You don't have permission to view this payment.")
+        return redirect('commission_list')
+
+    if not commission.paid_at:
+        commission.paid_at = timezone.now()
+        _log_commission_status(
+            commission,
+            CustomRequest.STATUS_IN_PROGRESS,
+            request.user,
+            note='Payment completed.',
+        )
+        commission.save()
+        _notify_commission(
+            commission,
+            subject="Commission payment completed",
+            message=f"The commission '{commission.title}' has been paid and is ready to start.",
+            to_user=commission.receiver,
+        )
+
+    messages.success(request, 'Payment completed successfully. Your artist can start work.')
+    return render(request, 'commissions/payment_completed.html', {'commission': commission})
+
+
+@login_required
+def commission_payment_canceled(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.sender:
+        messages.error(request, "You don't have permission to view this payment.")
+        return redirect('commission_list')
+    return render(request, 'commissions/payment_canceled.html', {'commission': commission})
+
+
+@login_required
+def commission_delivery_create(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.receiver:
+        messages.error(request, "Only the artist can deliver this commission.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if commission.status not in [
+        CustomRequest.STATUS_IN_PROGRESS,
+        CustomRequest.STATUS_REVISION_REQUESTED,
+    ]:
+        messages.error(request, "This commission isn't ready for delivery.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if request.method == 'POST':
+        form = CommissionDeliveryForm(request.POST, request.FILES)
+        if form.is_valid():
+            delivery = form.save(commit=False)
+            delivery.commission = commission
+            delivery.delivered_by = request.user
+            delivery.save()
+
+            if commission.status == CustomRequest.STATUS_REVISION_REQUESTED:
+                latest_revision = commission.revisions.first()
+                if latest_revision and not latest_revision.resolved_at:
+                    latest_revision.resolved_at = timezone.now()
+                    latest_revision.save(update_fields=['resolved_at'])
+
+            commission.delivered_at = timezone.now()
+            _log_commission_status(
+                commission,
+                CustomRequest.STATUS_DELIVERED,
+                request.user,
+                note='Delivery submitted.',
+            )
+            commission.save()
+            _notify_commission(
+                commission,
+                subject="Commission delivery sent",
+                message=f"A delivery was sent for '{commission.title}'.",
+                to_user=commission.sender,
+            )
+            messages.success(request, 'Delivery sent to the buyer.')
+        else:
+            messages.error(request, 'Please include a file or link for delivery.')
+    return redirect('commission_detail', commission_id=commission_id)
+
+
+@login_required
+def commission_request_revision(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.sender:
+        messages.error(request, "Only the buyer can request revisions.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if commission.status != CustomRequest.STATUS_DELIVERED:
+        messages.error(request, "Revisions can only be requested after delivery.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if not commission.can_request_revision():
+        messages.error(request, "You've reached the revision limit.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if request.method == 'POST':
+        form = CommissionRevisionRequestForm(request.POST)
+        if form.is_valid():
+            revision = form.save(commit=False)
+            revision.commission = commission
+            revision.requested_by = request.user
+            revision.save()
+            commission.revision_count += 1
+            _log_commission_status(
+                commission,
+                CustomRequest.STATUS_REVISION_REQUESTED,
+                request.user,
+                note='Revision requested.',
+            )
+            commission.save()
+            _notify_commission(
+                commission,
+                subject="Revision requested",
+                message=f"The buyer requested a revision for '{commission.title}'.",
+                to_user=commission.receiver,
+            )
+            messages.success(request, 'Revision request sent to the artist.')
+        else:
+            messages.error(request, 'Please describe the revision you need.')
+    return redirect('commission_detail', commission_id=commission_id)
+
+
+@login_required
+def commission_mark_complete(request, commission_id):
+    commission = get_object_or_404(CustomRequest, id=commission_id)
+    if request.user != commission.sender:
+        messages.error(request, "Only the buyer can mark this as complete.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    if commission.status != CustomRequest.STATUS_DELIVERED:
+        messages.error(request, "You can only complete a delivered commission.")
+        return redirect('commission_detail', commission_id=commission_id)
+
+    commission.completed_at = timezone.now()
+    _log_commission_status(
+        commission,
+        CustomRequest.STATUS_COMPLETED,
+        request.user,
+        note='Commission completed.',
+    )
+    commission.save()
+    _notify_commission(
+        commission,
+        subject="Commission completed",
+        message=f"The commission '{commission.title}' was marked complete by the buyer.",
+        to_user=commission.receiver,
+    )
+    messages.success(request, 'Commission marked as complete. Thank you!')
+    return redirect('commission_detail', commission_id=commission_id)

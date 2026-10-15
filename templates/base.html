@@ -59,6 +59,11 @@
                                     <i class="fa-solid fa-user"></i> My Account
                                 </a>
                             </li>
+                            <li>
+                                <a href="{% url 'commission_list' %}">
+                                    <i class="fa-solid fa-pen-nib"></i> Commissions
+                                </a>
+                            </li>
                             {% if is_artist %}
                                 <li><a href="{% url 'artwork_create' %}">Add Artwork</a></li>
                                 <li><a href="{% url 'artist_dashboard' %}">My Dashboard</a></li>
