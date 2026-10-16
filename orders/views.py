@@ -280,7 +280,21 @@ def payment_process(request):
             },
             'quantity': 1,
         })
-        
+
+        tax = order.get_tax()
+
+        if tax > 0:
+            session_data['line_items'].append({
+                'price_data': {
+                    'unit_amount': int(tax * 100),
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': 'Tax (8%)',
+                    },
+                },
+                'quantity': 1,
+            })
+            
         # Create Stripe checkout session
         session = stripe.checkout.Session.create(**session_data)
         

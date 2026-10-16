@@ -2,8 +2,7 @@ from django.db import models
 from django.conf import settings
 from artwork.models import Artwork
 import uuid
-from decimal import Decimal
-
+from decimal import Decimal, ROUND_HALF_UP
 class Order(models.Model):
     #! user information for logged in users 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -77,7 +76,9 @@ class Order(models.Model):
         return sum(item.quantity for item in self.items.all())
     
     def get_tax(self):
-        return self.get_total_cost() * Decimal('0.08')
+        return (
+            self.get_total_cost() * Decimal('0.08')
+        ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def get_shipping(self):
         return Decimal('10.00')

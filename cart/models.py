@@ -1,8 +1,7 @@
 from django.db import models
 from django.conf import settings
 from artwork.models import Artwork  
-from decimal import Decimal
-
+from decimal import Decimal, ROUND_HALF_UP
 class Cart(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     session_key = models.CharField(max_length=40, null=True, blank=True)
@@ -22,7 +21,9 @@ class Cart(models.Model):
         return sum(item.quantity for item in self.items.all())
 
     def get_tax(self):
-        return self.get_total_price() * Decimal('0.08')
+        return (
+            self.get_total_price() * Decimal('0.08')
+        ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def get_shipping(self):
         return Decimal('10.00')
