@@ -35,17 +35,19 @@
                 <div class="summary-totals">
                     <div class="total-row">
                         <span>Subtotal ({{ cart.get_total_quantity }} items):</span>
-                        <span>${{ cart_total|floatformat:2 }}</span>
+                        <span>${{ cart.get_total_price|floatformat:2 }}</span>
                     </div>
                     <div class="total-row">
-                        <span>Shipping: {{ cart.get_shipping }}</span>
+                        <span>Shipping:</span>
+                        <span>${{ cart.get_shipping|floatformat:2 }}</span>
                     </div>
                     <div class="total-row">
-                        <span>Tax {{ cart.get_tax }}):</span>
+                        <span>Tax (8%):</span>
+                        <span>${{ cart.get_tax|floatformat:2 }}</span>
                     </div>
                     <div class="total-row grand-total">
-                        <span>Total: {{ cart.get_grand_total }}</span>
-
+                        <span>Total:</span>
+                        <span>${{ cart.get_grand_total|floatformat:2 }}</span>
                     </div>
                 </div>
             </div>

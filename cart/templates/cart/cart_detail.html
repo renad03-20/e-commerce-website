@@ -60,20 +60,20 @@
                     <h3>Order Summary</h3>
                     <div class="summary-details">
                         <div class="summary-row">
-                            <span>Subtotal ({{ cart_total_quantity }} items)</span>
-                            <span>${{ cart_total_price }}</span>
+                            <span>Subtotal ({{ cart.get_total_quantity }} items)</span>
+                            <span>${{ cart.get_total_price|floatformat:2 }}</span>
                         </div>
                         <div class="summary-row">
                             <span>Shipping</span>
-                            <span>$10.00</span>
+                            <span>${{ cart.get_shipping|floatformat:2 }}</span>
                         </div>
                         <div class="summary-row">
-                            <span>Tax ({{ tax_rate|floatformat:1 }}%)</span>
-                            <span>${{ tax|floatformat:2 }}</span>
+                            <span>Tax (8%)</span>
+                            <span>${{ cart.get_tax|floatformat:2 }}</span>
                         </div>
                         <div class="summary-row total">
                             <span>Total</span>
-                            <span>${{ grand_total|floatformat:2 }}</span>
+                            <span>${{ cart.get_grand_total|floatformat:2 }}</span>
                         </div>
                     </div>
                     
