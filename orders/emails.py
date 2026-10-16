@@ -25,7 +25,7 @@ def send_order_confirmation(order):
     email = EmailMultiAlternatives(
         subject=subject,
         body=text_content,
-        from_email='noreply@artsy.com',
+        from_email=settings.DEFAULT_FROM_EMAIL,
         to=[order.email]
     )
     email.attach_alternative(html_content, "text/html")
@@ -57,7 +57,7 @@ def send_artist_order_notification(order_item):
     email = EmailMultiAlternatives(
         subject=subject,
         body=text_content,
-        from_email='noreply@artsy.com',
+        from_email=settings.DEFAULT_FROM_EMAIL,
         to=[artist.email]
     )
     email.attach_alternative(html_content, "text/html")
