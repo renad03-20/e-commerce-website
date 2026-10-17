@@ -187,19 +187,35 @@ def order_create(request):
     }
     return render(request, 'orders/order_create.html', context)
         
+@login_required
 def order_created(request, order_number):
-    #! Order confirmation page
-    order = get_object_or_404(Order, order_number=order_number)
-    
-    #! Security check: ensure user can only see their own orders
-    if request.user.is_authenticated and order.user != request.user:
-        messages.error(request, "You don't have permission to view this order.")
-        return redirect('home')
-    
-    context = {
-        'order': order,
-    }
-    return render(request, 'orders/order_created.html', context)
+    order = get_object_or_404(
+        Order,
+        order_number=order_number,
+    )
+
+    if order.user_id != request.user.id:
+        messages.error(
+            request,
+            "You don't have permission to view this order.",
+        )
+        return redirect('order_list')
+
+    if not order.paid:
+        messages.info(
+            request,
+            'Payment has not been confirmed yet.',
+        )
+        return redirect(
+            'order_detail',
+            order_number=order.order_number,
+        )
+
+    return render(
+        request,
+        'orders/order_created.html',
+        {'order': order},
+    )
 
 
 @login_required
@@ -220,18 +236,23 @@ def order_list(request):
 
 @login_required
 def order_detail(request, order_number):
-    #! Display order details
-    order = get_object_or_404(Order, order_number=order_number)
-    
-    #! Security check: ensure user can only see their own orders
-    if order.user != request.user:
-        messages.error(request, "You don't have permission to view this order.")
+    order = get_object_or_404(
+        Order,
+        order_number=order_number,
+    )
+
+    if order.user_id != request.user.id:
+        messages.error(
+            request,
+            "You don't have permission to view this order.",
+        )
         return redirect('order_list')
-    
-    context = {
-        'order': order,
-    }
-    return render(request, 'orders/order_detail.html', context)
+
+    return render(
+        request,
+        'orders/order_detail.html',
+        {'order': order},
+    )
 
 def payment_process(request):
     """
@@ -304,6 +325,7 @@ def payment_process(request):
     else:
         return render(request, 'orders/payment/process.html', {'order': order})
 
+@login_required
 def payment_completed(request):
     """
     Handle successful payment - Focus on UX and Cleanup
@@ -314,6 +336,20 @@ def payment_completed(request):
         return redirect('home')
     
     order = get_object_or_404(Order, order_number=order_id)
+
+    if order.user_id != request.user.id:
+        messages.error(
+            request,
+            "You don't have permission to view this order.",
+        )
+        return redirect('order_list')
+
+    if not order.paid:
+        messages.info(request, 'Payment has not been confirmed yet.')
+        return redirect(
+            'order_detail',
+            order_number=order.order_number,
+        )
     
     try:
         from cart.utils import get_or_create_cart
