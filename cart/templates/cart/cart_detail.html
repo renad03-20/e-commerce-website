@@ -112,27 +112,65 @@
 
 {% block extra_js %}
 <script>
+function quantityMessage(input, message) {
+    input.setCustomValidity(message);
+    input.reportValidity();
+}
+
 function incrementQuantity(itemId) {
     const input = document.getElementById('quantity-' + itemId);
-    const max = parseInt(input.max);
-    if (input.value < max) {
-        input.value = parseInt(input.value) + 1;
-        updateQuantity(itemId);
+    const quantity = Number(input.value);
+    const available = Number(input.max);
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+        quantityMessage(input, 'Enter a whole number of at least 1.');
+        return;
     }
+
+    if (quantity >= available) {
+        quantityMessage(
+            input,
+            available === 0
+                ? 'This artwork is out of stock. Please remove it from your cart.'
+                : 'Only ' + available + ' available in stock.'
+        );
+        return;
+    }
+
+    input.value = quantity + 1;
+    updateQuantity(itemId);
 }
 
 function decrementQuantity(itemId) {
     const input = document.getElementById('quantity-' + itemId);
-    if (input.value > 1) {
-        input.value = parseInt(input.value) - 1;
-        updateQuantity(itemId);
+    const quantity = Number(input.value);
+
+    if (!Number.isInteger(quantity) || quantity <= 1) {
+        quantityMessage(
+            input,
+            'Use the remove button to remove this artwork.'
+        );
+        return;
     }
+
+    input.value = quantity - 1;
+    updateQuantity(itemId);
 }
 
 function updateQuantity(itemId) {
     const input = document.getElementById('quantity-' + itemId);
-    const form = input.closest('form');
-    form.submit();
+    const quantity = Number(input.value);
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+        quantityMessage(input, 'Enter a whole number of at least 1.');
+        return;
+    }
+
+    input.setCustomValidity('');
+    input.value = quantity;
+
+    // The server checks stock and permits reductions after stock changes.
+    input.closest('form').submit();
 }
 </script>
 {% endblock %}

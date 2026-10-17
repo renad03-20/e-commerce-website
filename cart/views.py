@@ -4,6 +4,7 @@ from django.contrib import messages
 from cart.models import CartItem, Cart
 from .utils import get_or_create_cart, add_to_cart, remove_from_cart, update_cart_item, get_cart_data
 from artwork.models import Artwork
+from django.db import transaction
 
 def cart_detail(request):
     #! Display the contents of the shopping cart
@@ -17,26 +18,35 @@ def cart_detail(request):
     return render(request, 'cart/cart_detail.html', context)
 
 def add_to_cart_view(request, artwork_id):
-    #! Add artwork to cart and redirect to cart page
-    if request.method == 'POST':
-        quantity = int(request.POST.get('quantity', 1))
-        
-        # Check if artwork exists and has stock
-        artwork = get_object_or_404(Artwork, id=artwork_id)
-        
-        if artwork.stock < quantity:
-            messages.error(request, f"Sorry, only {artwork.stock} available in stock.")
-            return redirect('artwork_detail', pk=artwork_id)
-        
-        try:
+    if request.method != 'POST':
+        return redirect('artwork_list')
+
+    try:
+        quantity = int(request.POST.get('quantity', '1'))
+        if quantity < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        messages.error(request, 'Enter a whole number of at least 1.')
+        return redirect('artwork_detail', pk=artwork_id)
+
+    with transaction.atomic():
+        cart = get_or_create_cart(request)
+        Cart.objects.select_for_update().get(pk=cart.pk)
+        artwork = get_object_or_404(Artwork, pk=artwork_id)
+        existing = cart.items.filter(artwork=artwork).first()
+        already_in_cart = existing.quantity if existing else 0
+
+        if already_in_cart + quantity > artwork.stock:
+            messages.error(
+                request,
+                f'Only {artwork.stock} available. '
+                f'You already have {already_in_cart} in your cart.',
+            )
+        else:
             add_to_cart(request, artwork_id, quantity)
-            messages.success(request, f"Added {artwork.title} to your cart!")
-        except Exception as e:
-            messages.error(request, "Could not add item to cart.")
-        
-        return redirect('cart:cart_detail')
-    
-    return redirect('artwork_list')
+            messages.success(request, f'Added {artwork.title} to your cart!')
+
+    return redirect('cart:cart_detail')
 
 def remove_from_cart_view(request, item_id):
     #! remove item from cart
@@ -48,19 +58,52 @@ def remove_from_cart_view(request, item_id):
     return redirect('cart:cart_detail')
 
 def update_cart_view(request, item_id):
-    #! update item quantity in cart
-    if request.method == 'POST':
-        quantity = int(request.POST.get('quantity', 1))
-        
-        # Check stock availability 
-        cart_item = get_object_or_404(CartItem, id=item_id)
-        if quantity > cart_item.artwork.stock:
-            messages.error(request, f"Sorry, only {cart_item.artwork.stock} available in stock.")
-        elif update_cart_item(request, item_id, quantity):
-            messages.success(request, "Cart updated successfully.")
+    if request.method != 'POST':
+        return redirect('cart:cart_detail')
+
+    try:
+        quantity = int(request.POST.get('quantity', ''))
+        if quantity < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        messages.error(request, 'Enter a whole number of at least 1.')
+        return redirect('cart:cart_detail')
+
+    with transaction.atomic():
+        cart = get_or_create_cart(request)
+        Cart.objects.select_for_update().get(pk=cart.pk)
+        item = get_object_or_404(
+            CartItem.objects.select_related('artwork'),
+            pk=item_id,
+            cart=cart,
+        )
+        available = item.artwork.stock
+
+        if quantity > available and quantity >= item.quantity:
+            messages.error(
+                request,
+                f'Sorry, only {available} available in stock.',
+            )
         else:
-            messages.error(request, "Could not update cart.")
-    
+            item.quantity = quantity
+            item.save(update_fields=['quantity'])
+
+            if available == 0:
+                messages.warning(
+                    request,
+                    'This artwork is out of stock. '
+                    'Please remove it from your cart.',
+                )
+            elif quantity > available:
+                messages.warning(
+                    request,
+                    f'Quantity reduced. Only {available} available; '
+                    f'reduce the quantity to {available} or fewer '
+                    f'before checkout.',
+                )
+            else:
+                messages.success(request, 'Cart updated successfully.')
+
     return redirect('cart:cart_detail')
 
 @login_required
