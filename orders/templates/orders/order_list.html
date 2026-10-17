@@ -27,7 +27,7 @@
                     </div>
                     <div class="order-status">
                         <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
-                        <span class="order-total">${{ order.get_total_cost }}</span>
+                        <span class="order-total">${{ order.get_grand_total|floatformat:2 }}</span>
                     </div>
                 </div>
                 
