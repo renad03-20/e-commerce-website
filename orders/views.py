@@ -336,15 +336,34 @@ def payment_completed(request):
     
     messages.success(request, f'Payment completed successfully! Order #{order.order_number} is being processed.')
     return redirect('order_created', order_number=order.order_number)
+
+@login_required
 def payment_canceled(request):
-    """
-    Handle cancelled payment
-    """
-    order_id = request.session.get('order_id')
-    order = get_object_or_404(Order, id=order_id)
-    
-    messages.warning(request, 'Payment was cancelled. You can try again.')
-    return render(request, 'orders/payment/canceled.html', {'order': order})
+    order_number = request.session.get('order_id')
+
+    if not order_number:
+        messages.info(request, 'No active checkout was found.')
+        return redirect('order_list')
+
+    order = get_object_or_404(
+        Order,
+        order_number=order_number,
+        user=request.user,
+    )
+
+    if order.paid:
+        messages.info(request, 'This order has already been paid.')
+        return redirect('order_detail', order_number=order.order_number)
+
+    messages.warning(
+        request,
+        'Payment was cancelled. You can try again.',
+    )
+    return render(
+        request,
+        'orders/payment/canceled.html',
+        {'order': order},
+    )
 
 @login_required
 def artist_orders_dashboard(request):
