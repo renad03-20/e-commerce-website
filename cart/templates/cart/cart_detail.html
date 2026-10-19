@@ -86,7 +86,7 @@
                             Proceed to Checkout
                         </a>
                         {% else %}
-                        <a href="{% url 'login' %}?next={% url 'orders:order_create' %}" class="checkout-btn">
+                        <a href="{% url 'login' %}?next={% url 'order_create' %}" class="checkout-btn">
                             Login to Checkout
                         </a>
                         {% endif %}
