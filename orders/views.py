@@ -509,7 +509,7 @@ def artist_order_detail(request, order_number):
             order.save()
             messages.success(request, f'Order status updated to {new_status}.')
         
-        return redirect('orders:artist_order_detail', order_number=order.order_number)
+        return redirect('artist_order_detail', order_number=order.order_number)
     
     context = {
         'order': order,
@@ -527,7 +527,7 @@ def mark_order_shipped(request, order_number):
     
     if not artist_items.exists():
         messages.error(request, "You don't have permission to update this order.")
-        return redirect('orders:artist_orders_dashboard')
+        return redirect('artist_orders_dashboard')
     
     if request.method == 'POST':
         form = OrderShippingForm(request.POST, instance=order)
@@ -541,7 +541,7 @@ def mark_order_shipped(request, order_number):
             artist_items.update(artist_fulfillment_status='shipped')
             
             messages.success(request, f'Order #{order.order_number} marked as shipped!')
-            return redirect('orders:artist_order_detail', order_number=order.order_number)
+            return redirect('artist_order_detail', order_number=order.order_number)
     else:
         form = OrderShippingForm(instance=order)
     
