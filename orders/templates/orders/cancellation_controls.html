@@ -1,0 +1,16 @@
+{% if order.cancelled_at %}
+<p class="alert alert-info">This order has been cancelled.</p>
+{% elif order.cancellation_requested_at %}
+<p class="alert alert-warning">Cancellation is in progress. The artist cannot start work. Retry below if needed.</p>
+{% endif %}
+{% if order.refund_summary %}<p>Refund status: {{ order.refund_summary }}. A pending refund is not yet complete.</p>{% endif %}
+{% if 'failed' in order.refund_summary or 'canceled' in order.refund_summary %}
+<p class="alert alert-warning">Your refund needs attention. Please contact support with your order reference.</p>
+{% endif %}
+{% if order.can_buyer_cancel %}
+<form method="post" action="{% url 'cancel_order' order.order_number %}" onsubmit="return confirm('Cancel this order? Any payment will be refunded in full.');">
+    {% csrf_token %}
+    <p>You can cancel until an artist starts preparing your order.</p>
+    <button type="submit" class="btn btn-secondary">{% if order.cancellation_requested_at %}Retry Cancellation{% else %}Cancel Order{% endif %}</button>
+</form>
+{% endif %}

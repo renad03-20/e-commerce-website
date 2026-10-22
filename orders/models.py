@@ -27,6 +27,12 @@ class Order(models.Model):
     updated = models.DateTimeField(auto_now=True)
     paid = models.BooleanField(default=False)
 
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True)
+    preparation_started_at = models.DateTimeField(null=True, blank=True)
+    cancellation_requested_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_refunds = models.JSONField(default=dict, blank=True)
+
     #! payment information 
     stripe_payment_intent_id = models.CharField(max_length=100, blank=True)
     stripe_charge_id = models.CharField(max_length=100, blank=True)
@@ -51,6 +57,15 @@ class Order(models.Model):
     #! add notes field for internal communication
     artist_notes = models.TextField(blank=True)
     
+    @property
+    def can_buyer_cancel(self):
+        from .cancellation import can_buyer_cancel
+        return can_buyer_cancel(self)
+
+    @property
+    def refund_summary(self):
+        return ', '.join(sorted({r['status'] for r in self.cancellation_refunds.values()}))
+
     class Meta:
         ordering = ['-created']
 
@@ -98,6 +113,7 @@ class OrderItem(models.Model):
     #! artist specific tracking 
     artist_fulfillment_status = models.CharField(
         max_length=20,
+        default='pending',
         choices=[
             ('pending', 'pending'),
             ('preparing', 'preparing'),

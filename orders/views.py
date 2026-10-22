@@ -1,3 +1,6 @@
+from django.db import transaction
+from django.views.decorators.http import require_POST
+from .cancellation import PurchaseError, cancel_purchase, checkout, confirm_payment, require_fulfillable, update_refund, closed
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -23,89 +26,33 @@ from artwork.models import Artwork
 
 @csrf_exempt
 def stripe_webhook(request):
-    payload = request.body
-    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    event = None
-
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            request.body, request.META.get('HTTP_STRIPE_SIGNATURE'),
+            settings.STRIPE_WEBHOOK_SECRET,
         )
-    except (ValueError, stripe.error.SignatureVerificationError):
+    except (ValueError, stripe.SignatureVerificationError):
         return HttpResponse(status=400)
 
-    # Handle the checkout.session.completed event
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        metadata = session.get('metadata', {}) or {}
-        commission_id = metadata.get('commission_id')
-
-        if commission_id:
-            try:
-                from artwork.models import CustomRequest, CommissionStatusHistory
-
-                commission = CustomRequest.objects.get(id=commission_id)
-                if not commission.paid_at:
-                    commission.paid_at = timezone.now()
-                    commission.stripe_payment_intent_id = session.get('payment_intent', '')
-                    CommissionStatusHistory.objects.create(
-                        commission=commission,
-                        from_status=commission.status,
-                        to_status=CustomRequest.STATUS_IN_PROGRESS,
-                        changed_by=None,
-                        note='Payment confirmed via Stripe webhook.',
-                    )
-                    commission.status = CustomRequest.STATUS_IN_PROGRESS
-                    commission.save()
-            except CustomRequest.DoesNotExist:
-                return HttpResponse(status=404)
-            return HttpResponse(status=200)
-
-        order_number = session.get('client_reference_id')
-        if order_number and order_number.startswith('commission:'):
-            try:
-                commission_id = order_number.split(':', 1)[1]
-                from artwork.models import CustomRequest, CommissionStatusHistory
-
-                commission = CustomRequest.objects.get(id=commission_id)
-                if not commission.paid_at:
-                    commission.paid_at = timezone.now()
-                    commission.stripe_payment_intent_id = session.get('payment_intent', '')
-                    CommissionStatusHistory.objects.create(
-                        commission=commission,
-                        from_status=commission.status,
-                        to_status=CustomRequest.STATUS_IN_PROGRESS,
-                        changed_by=None,
-                        note='Payment confirmed via Stripe webhook.',
-                    )
-                    commission.status = CustomRequest.STATUS_IN_PROGRESS
-                    commission.save()
-            except (CustomRequest.DoesNotExist, IndexError):
-                return HttpResponse(status=404)
-            return HttpResponse(status=200)
-
-        if not order_number:
-            return HttpResponse(status=400)
-        
-        try:
-            order = Order.objects.get(order_number=order_number)
-            if not order.paid:
-                # MARK AS PAID
-                order.paid = True
-                order.status = 'processing'
-                order.save()
-                
-                # UPDATE STOCK
-                for item in order.items.all():
-                    artwork = item.artwork
-                    artwork.stock -= item.quantity
-                    artwork.save()
-                    
-                # NOTE: You can't clear the cart here easily 
-                # because webhooks don't have access to the user's session.
-        except Order.DoesNotExist:
-            return HttpResponse(status=404)
-
+    try:
+        if event['type'] in ('refund.updated', 'refund.failed', 'refund.created'):
+            update_refund(event['data']['object'])
+        elif event['type'] in ('checkout.session.completed', 'checkout.session.async_payment_succeeded'):
+            session = event['data']['object']
+            ref = session.get('client_reference_id') or ''
+            if ref.startswith('commission:'):
+                from artwork.models import CustomRequest
+                purchase = CustomRequest.objects.get(pk=int(ref.split(':', 1)[1]))
+            else:
+                purchase = Order.objects.get(order_number=ref)
+            confirm_payment(type(purchase), purchase.pk, session)
+    except (Order.DoesNotExist, ValueError):
+        return HttpResponse(status=400)
+    except Exception:
+        # Log server-side; 500 makes Stripe retry transient payment/refund errors.
+        import logging
+        logging.getLogger(__name__).exception('Stripe event processing failed')
+        return HttpResponse(status=500)
     return HttpResponse(status=200)
 
 @login_required
@@ -201,6 +148,10 @@ def order_created(request, order_number):
         )
         return redirect('order_list')
 
+    if closed(order):
+        messages.info(request, "This order is cancelled or cancellation is in progress.")
+        return redirect("order_detail", order_number=order.order_number)
+
     if not order.paid:
         messages.info(
             request,
@@ -254,6 +205,8 @@ def order_detail(request, order_number):
         {'order': order},
     )
 
+@login_required
+@transaction.atomic
 def payment_process(request):
     """
     Handle the payment process with Stripe
@@ -262,8 +215,14 @@ def payment_process(request):
     stripe.api_key = settings.STRIPE_SECRET_KEY
     
     order_id = request.session.get('order_id')
-    order = get_object_or_404(Order, order_number=order_id)
-    
+    order = get_object_or_404(Order.objects.select_for_update(), order_number=order_id)
+    if order.user_id != request.user.id:
+        messages.error(request, "You don't have permission to view this order.")
+        return redirect('order_list')
+    if closed(order) or order.paid:
+        messages.info(request, 'This order is already paid, cancelled, or being cancelled.')
+        return redirect('order_detail', order_number=order.order_number)
+
     if request.method == 'POST':
         success_url = request.build_absolute_uri(reverse('payment_completed'))
         cancel_url = request.build_absolute_uri(reverse('payment_canceled'))
@@ -317,7 +276,11 @@ def payment_process(request):
             })
             
         # Create Stripe checkout session
-        session = stripe.checkout.Session.create(**session_data)
+        try:
+            session = checkout(order, session_data)
+        except (PurchaseError, stripe.StripeError) as exc:
+            messages.error(request, str(exc) if isinstance(exc, PurchaseError) else 'Could not open checkout. Please try again.')
+            return redirect('order_detail', order_number=order.order_number)
         
         # Redirect to Stripe checkout
         return redirect(session.url, code=303)
@@ -343,6 +306,10 @@ def payment_completed(request):
             "You don't have permission to view this order.",
         )
         return redirect('order_list')
+
+    if closed(order):
+        messages.info(request, "This order is cancelled or cancellation is in progress.")
+        return redirect("order_detail", order_number=order.order_number)
 
     if not order.paid:
         messages.info(request, 'Payment has not been confirmed yet.')
@@ -387,6 +354,10 @@ def payment_canceled(request):
         user=request.user,
     )
 
+    if closed(order):
+        messages.info(request, 'This order is cancelled or cancellation is in progress.')
+        return redirect('order_detail', order_number=order.order_number)
+
     if order.paid:
         messages.info(request, 'This order has already been paid.')
         return redirect('order_detail', order_number=order.order_number)
@@ -426,6 +397,7 @@ def artist_orders_dashboard(request):
     recent_sales = OrderItem.objects.filter(
         artwork__artist=request.user,
         order__paid=True,
+        order__cancelled_at__isnull=True,
         order__created__gte=thirty_days_ago
     ).aggregate(
         total_revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
@@ -436,6 +408,7 @@ def artist_orders_dashboard(request):
         OrderItem.objects.filter(
             artwork__artist=request.user,
             order__paid=True,
+        order__cancelled_at__isnull=True,
             order__created__gte=timezone.localdate() - timezone.timedelta(days=365)
         )
         .annotate(month=TruncMonth('order__created'))
@@ -449,7 +422,8 @@ def artist_orders_dashboard(request):
     best_sellers = (
         OrderItem.objects.filter(
             artwork__artist=request.user,
-            order__paid=True
+            order__paid=True,
+        order__cancelled_at__isnull=True
         )
         .values('artwork__title', 'artwork__id')
         .annotate(
@@ -471,85 +445,67 @@ def artist_orders_dashboard(request):
     return render(request, 'orders/artist_orders_dashboard.html', context)
 
 @login_required
+@transaction.atomic
 def artist_order_detail(request, order_number):
-    """
-    Detailed view of an order for the artist
-    """
-    order = get_object_or_404(Order, order_number=order_number)
-    
-    # Security check - ensure artist owns items in this order
+    order = get_object_or_404(Order.objects.select_for_update(), order_number=order_number)
     artist_items = order.items.filter(artwork__artist=request.user)
     if not artist_items.exists():
         messages.error(request, "You don't have permission to view this order.")
-        return redirect('orders:artist_orders_dashboard')
-    
+        return redirect('artist_orders_dashboard')
     if request.method == 'POST':
-        # Handle status updates
+        try:
+            require_fulfillable(order)
+        except PurchaseError as exc:
+            messages.error(request, str(exc))
+            return redirect('artist_order_detail', order_number=order.order_number)
         new_status = request.POST.get('status')
-        tracking_number = request.POST.get('tracking_number')
-        shipping_carrier = request.POST.get('shipping_carrier')
-        artist_notes = request.POST.get('artist_notes')
-        
-        if new_status in dict(OrderItem._meta.get_field('artist_fulfillment_status').choices):
-            # Update artist-specific fulfillment status for their items
+        valid_statuses = dict(OrderItem._meta.get_field('artist_fulfillment_status').choices)
+        if new_status not in valid_statuses:
+            messages.error(request, 'Please choose a valid fulfillment status.')
+        else:
+            if not order.preparation_started_at and (new_status in ('preparing', 'shipped', 'delivered') or artist_items.exclude(artist_fulfillment_status__in=['', 'pending']).exists()):
+                order.preparation_started_at = timezone.now()
             artist_items.update(artist_fulfillment_status=new_status)
-            
-            # Update order tracking if provided
+            tracking_number = request.POST.get('tracking_number', '').strip()
             if tracking_number:
                 order.tracking_number = tracking_number
-                order.shipping_carrier = shipping_carrier
-                if new_status == 'shipped' and not order.shipped_at:
-                    order.shipped_at = timezone.now()
-                elif new_status == 'delivered' and not order.delivered_at:
-                    order.delivered_at = timezone.now()
-            
+                order.shipping_carrier = request.POST.get('shipping_carrier', '')
+            if new_status == 'shipped' and not order.shipped_at:
+                order.shipped_at = timezone.now()
+            elif new_status == 'delivered' and not order.delivered_at:
+                order.delivered_at = timezone.now()
+            artist_notes = request.POST.get('artist_notes', '')
             if artist_notes:
                 order.artist_notes = artist_notes
-            
             order.save()
             messages.success(request, f'Order status updated to {new_status}.')
-        
         return redirect('artist_order_detail', order_number=order.order_number)
-    
-    context = {
-        'order': order,
-        'artist_items': artist_items,
-    }
-    return render(request, 'orders/artist_order_detail.html', context)
+    return render(request, 'orders/artist_order_detail.html', {'order': order, 'artist_items': artist_items})
 
 @login_required
+@transaction.atomic
 def mark_order_shipped(request, order_number):
-    """
-    Mark order as shipped with tracking info
-    """
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_object_or_404(Order.objects.select_for_update(), order_number=order_number)
     artist_items = order.items.filter(artwork__artist=request.user)
-    
     if not artist_items.exists():
         messages.error(request, "You don't have permission to update this order.")
         return redirect('artist_orders_dashboard')
-    
-    if request.method == 'POST':
-        form = OrderShippingForm(request.POST, instance=order)
-        if form.is_valid():
-            order = form.save(commit=False)
-            order.shipped_at = timezone.now()
-            order.status = 'shipped'
-            order.save()
-            
-            # Update artist fulfillment status
-            artist_items.update(artist_fulfillment_status='shipped')
-            
-            messages.success(request, f'Order #{order.order_number} marked as shipped!')
-            return redirect('artist_order_detail', order_number=order.order_number)
-    else:
-        form = OrderShippingForm(instance=order)
-    
-    context = {
-        'order': order,
-        'form': form,
-    }
-    return render(request, 'orders/mark_shipped.html', context)
+    try:
+        require_fulfillable(order)
+    except PurchaseError as exc:
+        messages.error(request, str(exc))
+        return redirect('artist_order_detail', order_number=order.order_number)
+    form = OrderShippingForm(request.POST or None, instance=order)
+    if request.method == 'POST' and form.is_valid():
+        order = form.save(commit=False)
+        order.shipped_at = timezone.now()
+        order.preparation_started_at = order.preparation_started_at or order.shipped_at
+        order.status = 'shipped'
+        order.save()
+        artist_items.update(artist_fulfillment_status='shipped')
+        messages.success(request, f'Order #{order.order_number} marked as shipped!')
+        return redirect('artist_order_detail', order_number=order.order_number)
+    return render(request, 'orders/mark_shipped.html', {'order': order, 'form': form})
 
 @login_required
 def artist_sales_analytics(request):
@@ -570,7 +526,8 @@ def artist_sales_analytics(request):
     # Overall stats
     total_stats = OrderItem.objects.filter(
         artwork__artist=request.user,
-        order__paid=True
+        order__paid=True,
+        order__cancelled_at__isnull=True
     ).aggregate(
         total_revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
         total_orders=Count('order', distinct=True),
@@ -583,6 +540,7 @@ def artist_sales_analytics(request):
     'week': OrderItem.objects.filter(
         artwork__artist=request.user,
         order__paid=True,
+        order__cancelled_at__isnull=True,
         order__created__gte=week_ago
         ).aggregate(
             revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
@@ -591,6 +549,7 @@ def artist_sales_analytics(request):
         'month': OrderItem.objects.filter(
             artwork__artist=request.user,
             order__paid=True,
+        order__cancelled_at__isnull=True,
             order__created__gte=month_ago
         ).aggregate(
             revenue=Coalesce(Sum(revenue_expr), Decimal("0.00")),
@@ -602,6 +561,7 @@ def artist_sales_analytics(request):
     monthly_revenue = OrderItem.objects.filter(
     artwork__artist=request.user,
     order__paid=True,
+        order__cancelled_at__isnull=True,
     order__created__gte=year_ago
     ).annotate(
         month=TruncMonth('order__created')
@@ -612,7 +572,8 @@ def artist_sales_analytics(request):
     # Top performing artworks
     top_artworks = OrderItem.objects.filter(
     artwork__artist=request.user,
-    order__paid=True
+    order__paid=True,
+        order__cancelled_at__isnull=True
     ).values(
         'artwork__title', 'artwork__id', 'artwork__image'
     ).annotate(
@@ -628,3 +589,24 @@ def artist_sales_analytics(request):
         'top_artworks': top_artworks,
     }
     return render(request, 'orders/artist_sales_analytics.html', context)
+
+
+@login_required
+@require_POST
+def cancel_order(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number)
+    if order.user_id != request.user.id:
+        messages.error(request, "You don't have permission to cancel this order.")
+        return redirect('order_list')
+    try:
+        cancel_purchase(Order, order.pk, request.user)
+    except PurchaseError as exc:
+        messages.error(request, str(exc))
+    except stripe.StripeError:
+        messages.error(request, 'Stripe could not finish cancellation. Your request is saved; please retry. Work is blocked.')
+    else:
+        messages.success(request, 'Order cancelled. Any payment refund has been submitted to Stripe.')
+        if request.session.get('order_id') == order.order_number:
+            request.session.pop('order_id', None)
+    return redirect('order_detail', order_number=order.order_number)
+

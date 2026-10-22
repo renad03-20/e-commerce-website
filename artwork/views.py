@@ -1,3 +1,6 @@
+from django.db import transaction
+from django.views.decorators.http import require_POST
+from orders.cancellation import PurchaseError, cancel_purchase, checkout, closed, require_fulfillable
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
@@ -161,7 +164,7 @@ def artist_dashboard(request):
     total_revenue = sum(item.get_cost() for item in artist_order_items)
 
     #! Get paid orders only for revenue calculation
-    paid_order_items = artist_order_items.filter(order__paid=True)
+    paid_order_items = artist_order_items.filter(order__paid=True).exclude(order__status='cancelled')
     actual_revenue = sum(item.get_cost() for item in paid_order_items)
     
     #! Best selling artwork
@@ -341,11 +344,12 @@ def commission_detail(request, commission_id):
         'revision_form': CommissionRevisionRequestForm(),
         'cancel_form': CommissionCancelForm(),
         'deliveries': commission.deliveries.all(),
-        'messages': commission.messages.select_related('sender').all(),
+        'thread_messages': commission.messages.select_related('sender').all(),
         'revisions': commission.revisions.select_related('requested_by').all(),
         'status_history': commission.status_history.select_related('changed_by').all(),
         'status_requested': CustomRequest.STATUS_REQUESTED,
         'status_awaiting_payment': CustomRequest.STATUS_AWAITING_PAYMENT,
+        'status_awaiting_artist': CustomRequest.STATUS_AWAITING_ARTIST,
         'status_in_progress': CustomRequest.STATUS_IN_PROGRESS,
         'status_delivered': CustomRequest.STATUS_DELIVERED,
         'status_revision_requested': CustomRequest.STATUS_REVISION_REQUESTED,
@@ -376,8 +380,13 @@ def commission_message_create(request, commission_id):
 
 
 @login_required
+@transaction.atomic
 def commission_accept(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
+    commission = get_object_or_404(CustomRequest.objects.select_for_update(), id=commission_id)
+    if closed(commission):
+        messages.error(request, 'This commission is cancelled or cancellation is in progress.')
+        return redirect('commission_detail', commission_id=commission_id)
+
     if request.user != commission.receiver:
         messages.error(request, "Only the artist can accept this commission.")
         return redirect('commission_detail', commission_id=commission_id)
@@ -422,8 +431,13 @@ def commission_accept(request, commission_id):
 
 
 @login_required
+@transaction.atomic
 def commission_decline(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
+    commission = get_object_or_404(CustomRequest.objects.select_for_update(), id=commission_id)
+    if closed(commission):
+        messages.error(request, 'This commission is cancelled or cancellation is in progress.')
+        return redirect('commission_detail', commission_id=commission_id)
+
     if request.user != commission.receiver:
         messages.error(request, "Only the artist can decline this commission.")
         return redirect('commission_detail', commission_id=commission_id)
@@ -456,52 +470,35 @@ def commission_decline(request, commission_id):
 
 
 @login_required
+@require_POST
 def commission_cancel(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
+    commission = get_object_or_404(CustomRequest, pk=commission_id)
     if not _commission_participant_guard(request, commission):
         return redirect('commission_list')
-
-    if commission.status in [
-        CustomRequest.STATUS_COMPLETED,
-        CustomRequest.STATUS_DECLINED,
-        CustomRequest.STATUS_CANCELED,
-    ]:
-        messages.error(request, "This commission can't be canceled.")
-        return redirect('commission_detail', commission_id=commission_id)
-
-    if request.method == 'POST':
-        form = CommissionCancelForm(request.POST)
-        if form.is_valid():
-            commission.cancel_reason = form.cleaned_data.get('cancel_reason', '')
-            commission.canceled_at = timezone.now()
-            _log_commission_status(
-                commission,
-                CustomRequest.STATUS_CANCELED,
-                request.user,
-                note='Commission canceled.',
-            )
-            commission.save()
-            target_user = commission.receiver if request.user == commission.sender else commission.sender
-            _notify_commission(
-                commission,
-                subject=f"Commission canceled by {request.user.username}",
-                message=f"The commission '{commission.title}' was canceled.",
-                to_user=target_user,
-            )
-            messages.info(request, 'Commission canceled.')
-        else:
-            messages.error(request, 'Please provide a valid cancellation note.')
-    return redirect('commission_detail', commission_id=commission_id)
+    form = CommissionCancelForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, 'Please provide a valid cancellation note.')
+        return redirect('commission_detail', commission_id=commission.pk)
+    try:
+        cancel_purchase(CustomRequest, commission.pk, request.user, form.cleaned_data.get('cancel_reason', ''))
+    except PurchaseError as exc:
+        messages.error(request, str(exc))
+    except stripe.StripeError:
+        messages.error(request, 'Stripe could not finish cancellation. Your request is saved; please retry. Work is blocked.')
+    else:
+        messages.success(request, 'Commission cancelled. Any payment refund has been submitted to Stripe.')
+    return redirect('commission_detail', commission_id=commission.pk)
 
 
 @login_required
+@transaction.atomic
 def commission_payment_start(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
+    commission = get_object_or_404(CustomRequest.objects.select_for_update(), id=commission_id)
     if request.user != commission.sender:
         messages.error(request, "Only the buyer can pay for this commission.")
         return redirect('commission_detail', commission_id=commission_id)
 
-    if commission.status != CustomRequest.STATUS_AWAITING_PAYMENT:
+    if closed(commission) or commission.status != CustomRequest.STATUS_AWAITING_PAYMENT:
         messages.error(request, "This commission isn't ready for payment.")
         return redirect('commission_detail', commission_id=commission_id)
 
@@ -519,7 +516,7 @@ def commission_payment_start(request, commission_id):
             reverse('commission_payment_canceled', args=[commission.id])
         )
 
-        session = stripe.checkout.Session.create(
+        session_data = dict(
             mode='payment',
             client_reference_id=f'commission:{commission.id}',
             success_url=success_url,
@@ -538,8 +535,11 @@ def commission_payment_start(request, commission_id):
             ],
             metadata={'commission_id': str(commission.id), 'type': 'commission'},
         )
-        commission.stripe_checkout_session_id = session.id
-        commission.save(update_fields=['stripe_checkout_session_id'])
+        try:
+            session = checkout(commission, session_data)
+        except (PurchaseError, stripe.StripeError) as exc:
+            messages.error(request, str(exc) if isinstance(exc, PurchaseError) else 'Could not open checkout. Please try again.')
+            return redirect('commission_detail', commission_id=commission.id)
         return redirect(session.url, code=303)
 
     return render(request, 'commissions/payment_process.html', {'commission': commission})
@@ -547,29 +547,17 @@ def commission_payment_start(request, commission_id):
 
 @login_required
 def commission_payment_completed(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
-    if request.user != commission.sender:
+    commission = get_object_or_404(CustomRequest, pk=commission_id)
+    if request.user.id != commission.sender_id:
         messages.error(request, "You don't have permission to view this payment.")
         return redirect('commission_list')
-
-    if not commission.paid_at:
-        commission.paid_at = timezone.now()
-        _log_commission_status(
-            commission,
-            CustomRequest.STATUS_IN_PROGRESS,
-            request.user,
-            note='Payment completed.',
-        )
-        commission.save()
-        _notify_commission(
-            commission,
-            subject="Commission payment completed",
-            message=f"The commission '{commission.title}' has been paid and is ready to start.",
-            to_user=commission.receiver,
-        )
-
-    messages.success(request, 'Payment completed successfully. Your artist can start work.')
-    return render(request, 'commissions/payment_completed.html', {'commission': commission})
+    if closed(commission):
+        messages.info(request, 'This commission is cancelled or cancellation is in progress.')
+    elif not commission.paid_at:
+        messages.info(request, 'Payment has not been confirmed yet. Please check again shortly.')
+    else:
+        messages.success(request, 'Payment confirmed. Your commission is waiting for the artist to start work.')
+    return redirect('commission_detail', commission_id=commission.pk)
 
 
 @login_required
@@ -582,8 +570,13 @@ def commission_payment_canceled(request, commission_id):
 
 
 @login_required
+@transaction.atomic
 def commission_delivery_create(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
+    commission = get_object_or_404(CustomRequest.objects.select_for_update(), id=commission_id)
+    if closed(commission):
+        messages.error(request, 'This commission is cancelled or cancellation is in progress.')
+        return redirect('commission_detail', commission_id=commission_id)
+
     if request.user != commission.receiver:
         messages.error(request, "Only the artist can deliver this commission.")
         return redirect('commission_detail', commission_id=commission_id)
@@ -698,3 +691,26 @@ def commission_mark_complete(request, commission_id):
     )
     messages.success(request, 'Commission marked as complete. Thank you!')
     return redirect('commission_detail', commission_id=commission_id)
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def commission_start_work(request, commission_id):
+    commission = get_object_or_404(CustomRequest.objects.select_for_update(), pk=commission_id)
+    if request.user.id != commission.receiver_id:
+        messages.error(request, "Only the artist can start this commission.")
+        return redirect('commission_list')
+    try:
+        require_fulfillable(commission)
+        if commission.status != CustomRequest.STATUS_AWAITING_ARTIST:
+            raise PurchaseError('This commission is not waiting to start.')
+    except PurchaseError as exc:
+        messages.error(request, str(exc))
+    else:
+        commission.work_started_at = timezone.now()
+        _log_commission_status(commission, CustomRequest.STATUS_IN_PROGRESS, request.user, note='Artist started work; buyer cancellation closed.')
+        commission.save()
+        messages.success(request, 'Work started. Buyer cancellation is now closed.')
+    return redirect('commission_detail', commission_id=commission.pk)
+

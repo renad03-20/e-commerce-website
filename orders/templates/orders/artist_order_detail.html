@@ -44,7 +44,7 @@
             <div class="actions-card">
                 <h3>Quick Actions</h3>
                 <div class="action-buttons">
-                    {% if order.status != 'shipped' and order.status != 'delivered' %}
+                    {% if order.paid and not order.cancellation_requested_at and order.status != 'cancelled' and order.status != 'shipped' and order.status != 'delivered' %}
                     <a href="{% url 'mark_order_shipped' order.order_number %}" class="btn btn-primary">
                         📦 Mark as Shipped
                     </a>
@@ -123,7 +123,8 @@
         <div class="status-update-section">
             <div class="update-card">
                 <h3>Update Order Status</h3>
-                <form method="post" class="status-form">
+                {% if order.paid and not order.cancellation_requested_at and order.status != 'cancelled' %}
+                    <form method="post" class="status-form">
                     {% csrf_token %}
                     
                     <div class="form-group">
@@ -171,6 +172,9 @@
 
                     <button type="submit" class="btn btn-primary">Update Status</button>
                 </form>
+                    {% else %}
+                    <p>Fulfillment is unavailable until payment is confirmed, or while the order is cancelled or being cancelled.</p>
+                    {% endif %}
             </div>
         </div>
     </div>

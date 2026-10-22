@@ -47,8 +47,25 @@
         <div class="alert alert-warning">Cancel reason: {{ commission.cancel_reason }}</div>
         {% endif %}
 
+        {% if commission.cancellation_requested_at and commission.status != status_canceled %}
+        <p class="alert alert-warning">Cancellation is in progress. Work is blocked. Retry cancellation if needed.</p>
+        {% endif %}
+        {% if commission.refund_summary %}<p>Refund status: {{ commission.refund_summary }}. A pending refund is not yet complete.</p>{% endif %}
+{% if 'failed' in commission.refund_summary or 'canceled' in commission.refund_summary %}
+<p class="alert alert-warning">Your refund needs attention. Please contact support with your order reference.</p>
+{% endif %}
+        {% if is_artist and commission.status == status_awaiting_artist and not commission.cancellation_requested_at %}
+        <div class="action-card">
+            <h3>Ready to Start</h3>
+            <p>Payment is confirmed. Starting work closes buyer cancellation.</p>
+            <form method="post" action="{% url 'commission_start_work' commission.id %}" onsubmit="return confirm('Start work and close buyer cancellation?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">Start Work</button>
+            </form>
+        </div>
+        {% endif %}
         <div class="commission-actions">
-            {% if is_artist and commission.status == status_requested %}
+            {% if is_artist and commission.status == status_requested and not commission.cancellation_requested_at %}
             <div class="action-card">
                 <h3>Accept Request</h3>
                 <form method="post" action="{% url 'commission_accept' commission.id %}">
@@ -67,7 +84,7 @@
             </div>
             {% endif %}
 
-            {% if is_buyer and commission.status == status_awaiting_payment %}
+            {% if is_buyer and commission.status == status_awaiting_payment and not commission.cancellation_requested_at %}
             <div class="action-card">
                 <h3>Complete Payment</h3>
                 <p>The artist accepted your commission. Pay to begin the project.</p>
@@ -78,7 +95,7 @@
             </div>
             {% endif %}
 
-            {% if is_artist and commission.status == status_in_progress %}
+            {% if is_artist and commission.status == status_in_progress and not commission.cancellation_requested_at %}
             <div class="action-card">
                 <h3>Send Delivery</h3>
                 <form method="post" enctype="multipart/form-data" action="{% url 'commission_delivery' commission.id %}">
@@ -117,13 +134,14 @@
             </div>
             {% endif %}
 
-            {% if commission.status != status_completed and commission.status != status_declined and commission.status != status_canceled %}
+            {% if is_buyer and commission.can_buyer_cancel or is_artist and commission.status != status_completed and commission.status != status_declined and commission.status != status_canceled %}
             <div class="action-card">
                 <h3>Cancel Commission</h3>
-                <form method="post" action="{% url 'commission_cancel' commission.id %}">
+                <form method="post" action="{% url 'commission_cancel' commission.id %}" onsubmit="return confirm('Cancel this commission and refund any payment?');">
                     {% csrf_token %}
                     {{ cancel_form.as_p }}
-                    <button type="submit" class="btn btn-outline-danger">Cancel</button>
+                    <p>{% if is_buyer %}Cancellation is available until the artist starts work. {% endif %}Any payment will be refunded in full.</p>
+                    <button type="submit" class="btn btn-outline-danger">{% if commission.cancellation_requested_at %}Retry Cancellation{% else %}Cancel Commission{% endif %}</button>
                 </form>
             </div>
             {% endif %}
@@ -133,7 +151,7 @@
             <div class="thread-column">
                 <h3>Messages</h3>
                 <div class="thread-list">
-                    {% for message in messages %}
+                    {% for message in thread_messages %}
                     <div class="thread-message {% if message.sender == user %}self{% endif %}">
                         <div class="thread-meta">
                             <strong>{{ message.sender.username }}</strong>

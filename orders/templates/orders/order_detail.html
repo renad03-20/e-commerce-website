@@ -80,6 +80,7 @@
             </div>
         </div>
         
+        {% include 'orders/cancellation_controls.html' %}
         <div class="order-actions">
             <a href="{% url 'order_list' %}" class="btn btn-secondary">← Back to Orders</a>
             <a href="{% url 'artwork_list' %}" class="btn btn-primary">Continue Shopping</a>

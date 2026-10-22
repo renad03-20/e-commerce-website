@@ -55,6 +55,7 @@ class CustomRequest(models.Model):
     STATUS_REQUESTED = 'requested'
     STATUS_DECLINED = 'declined'
     STATUS_AWAITING_PAYMENT = 'awaiting_payment'
+    STATUS_AWAITING_ARTIST = 'awaiting_artist'
     STATUS_IN_PROGRESS = 'in_progress'
     STATUS_DELIVERED = 'delivered'
     STATUS_REVISION_REQUESTED = 'revision_requested'
@@ -65,6 +66,7 @@ class CustomRequest(models.Model):
         (STATUS_REQUESTED, _('Requested')),
         (STATUS_DECLINED, _('Declined')),
         (STATUS_AWAITING_PAYMENT, _('Awaiting Payment')),
+        (STATUS_AWAITING_ARTIST, _('Awaiting Artist')),
         (STATUS_IN_PROGRESS, _('In Progress')),
         (STATUS_DELIVERED, _('Delivered')),
         (STATUS_REVISION_REQUESTED, _('Revision Requested')),
@@ -96,6 +98,9 @@ class CustomRequest(models.Model):
     stripe_payment_intent_id = models.CharField(max_length=200, blank=True)
     stripe_checkout_session_id = models.CharField(max_length=200, blank=True)
     accepted_at = models.DateTimeField(blank=True, null=True)
+    work_started_at = models.DateTimeField(blank=True, null=True)
+    cancellation_requested_at = models.DateTimeField(blank=True, null=True)
+    cancellation_refunds = models.JSONField(default=dict, blank=True)
     paid_at = models.DateTimeField(blank=True, null=True)
     delivered_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
@@ -106,6 +111,15 @@ class CustomRequest(models.Model):
 
     def __str__(self):
         return f"Commission #{self.id} - {self.title}"
+
+    @property
+    def can_buyer_cancel(self):
+        from orders.cancellation import can_buyer_cancel
+        return can_buyer_cancel(self)
+
+    @property
+    def refund_summary(self):
+        return ', '.join(sorted({r['status'] for r in self.cancellation_refunds.values()}))
 
     def is_participant(self, user):
         return user == self.sender or user == self.receiver
