@@ -34,9 +34,11 @@
                     <a href="{% url 'home' %}">
                         <img src="{% static 'img/artsyLogo.png' %}" class="logo" alt="Art Gallery Logo">
                     </a>
-                    <ul>
+                    <button type="button" class="mobile-menu-toggle" aria-controls="site-navigation" aria-expanded="false">Menu</button>
+                    <ul id="site-navigation">
                         <li><a href="{% url 'home' %}">Home</a></li>
                         <li><a href="{% url 'artwork_list' %}">Gallery</a></li>
+                        <li><a href="{% url 'artist_list' %}">Artists</a></li>
                         <!-- <li><a href="#">Contact Us</a></li> -->
                         
                         {% if user.is_authenticated %}
@@ -119,6 +121,7 @@
     </div>
 </footer>
 
+    <script src="{% static 'js/site_navigation.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import stripe
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.http import HttpResponse
 from django.test import TestCase, Client, override_settings
 from django.urls import include, path, reverse
@@ -44,6 +45,7 @@ class CancellationTests(TestCase):
         self.buyer = User.objects.create_user('buyer', password='test-password')
         self.other = User.objects.create_user('other', password='test-password')
         self.artist = User.objects.create_user('artist', password='test-password')
+        self.artist.groups.add(Group.objects.get_or_create(name='Artists')[0])
         self.art = Artwork.objects.create(artist=self.artist, title='Test art', price='20.00', stock=4, image='test.jpg')
         self.order = Order.objects.create(user=self.buyer, first_name='Test', last_name='Buyer', email='test@example.com', address='Test', city='Test', postal_code='12345', country='SA')
         self.item = OrderItem.objects.create(order=self.order, artwork=self.art, price='20.00', quantity=1)

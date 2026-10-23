@@ -1,0 +1,81 @@
+.artist-discovery { max-width: 1180px; margin: 0 auto; padding: 42px 24px 64px; color: #252a30; }
+.artist-discovery * { box-sizing: border-box; }
+.artist-discovery h1, .artist-discovery h2, .artist-discovery h3 { line-height: 1.2; margin: 0 0 12px; }
+.artist-discovery h1 { font-size: clamp(2rem, 4vw, 3.1rem); letter-spacing: -.035em; }
+.artist-discovery p { line-height: 1.65; }
+.eyebrow { text-transform: uppercase; letter-spacing: .12em; color: #74603d; font-size: .75rem; font-weight: 700; margin-bottom: 8px; }
+.discovery-heading { max-width: 720px; margin-bottom: 26px; }
+.discovery-heading > p:last-child { color: #58616a; }
+.artist-search { display: flex; align-items: end; gap: 18px; flex-wrap: wrap; padding: 20px; margin-bottom: 28px; background: #f6f5f2; border-radius: 14px; }
+.artist-search > div { flex: 1; min-width: 180px; }
+.artist-search label:not(.availability-filter) { display: block; margin-bottom: 7px; font-weight: 600; }
+.artist-search input:not([type=checkbox]), .commission-request-form input:not([type=file]), .commission-request-form textarea { width: 100%; padding: 12px; border: 1px solid #b8b9b7; border-radius: 8px; background: #fff; color: #252a30; font: inherit; }
+.availability-filter { display: flex; align-items: center; gap: 9px; padding: 12px 0; }
+.availability-filter input { width: 18px; height: 18px; }
+.flow-button { display: inline-flex; align-items: center; justify-content: center; min-height: 45px; padding: 11px 18px; border: 1px solid #262c30; border-radius: 8px; color: #fff; background: #262c30; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; text-align: center; line-height: 1.4; }
+.flow-button:hover { background: #42494d; color: #fff; }
+.flow-button-secondary { background: #fff; color: #262c30; }
+.flow-button-secondary:hover { background: #f3f2ef; color: #262c30; }
+.flow-button:disabled { opacity: .55; cursor: not-allowed; }
+.flow-link, .flow-back { color: #384b56; font-weight: 600; }
+.flow-back { display: inline-block; margin-bottom: 28px; }
+.artist-directory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 24px; }
+.directory-card { padding: 22px; border: 1px solid #dedfdb; border-radius: 16px; background: #fff; display: flex; flex-direction: column; gap: 15px; }
+.artist-identity { display: flex; align-items: center; gap: 14px; color: inherit; text-decoration: none; min-width: 0; }
+.artist-identity h2 { font-size: 1.25rem; margin: 0; overflow-wrap: anywhere; }
+.artist-identity p { color: #697077; font-size: .85rem; margin: 5px 0 0; }
+.artist-avatar { flex: 0 0 58px; width: 58px; height: 58px; border-radius: 50%; object-fit: cover; }
+.avatar-initial { display: inline-flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: #574834; background: #ece7dd; }
+.artist-avatar-large { flex-basis: 92px; width: 92px; height: 92px; font-size: 2rem; }
+.commission-availability { align-self: start; display: inline-block; padding: 5px 10px; font-size: .8rem; border-radius: 20px; color: #5e6469; background: #f0f0ec; }
+.availability-open { color: #205c45; background: #e4f3e9; }
+.artist-bio { margin: 0; color: #58616a; }
+.portfolio-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: auto; }
+.portfolio-preview img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 7px; display: block; }
+.artist-pagination { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 32px; }
+.flow-empty { padding: 28px; border: 1px dashed #c9cbc6; border-radius: 12px; grid-column: 1 / -1; }
+.portfolio-heading { background: #f6f5f2; border-radius: 18px; padding: 32px; margin-bottom: 36px; }
+.portfolio-bio { margin-top: 22px; max-width: 760px; line-height: 1.7; overflow-wrap: anywhere; }
+.portfolio-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 24px; }
+.portfolio-actions p { margin: 0; }
+.portfolio-section { scroll-margin-top: 20px; }
+.portfolio-section-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; }
+.portfolio-section-heading h2 { margin: 0; }
+.portfolio-art-card { border: 1px solid #dedfdb; border-radius: 14px; overflow: hidden; }
+.portfolio-art-card > a { color: inherit; text-decoration: none; }
+.portfolio-art-card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; }
+.portfolio-art-card h3 { padding: 18px 18px 0; font-size: 1.1rem; }
+.portfolio-art-meta { display: flex; justify-content: space-between; gap: 8px; padding: 0 18px 18px; color: #58616a; }
+.portfolio-featured { display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; align-items: center; margin-bottom: 38px; padding: 24px; border: 1px solid #d5c49e; border-radius: 16px; }
+.portfolio-featured img { display: block; width: 100%; max-height: 300px; object-fit: cover; border-radius: 10px; }
+.request-layout { max-width: 800px; }
+.request-recipient { display: flex; align-items: center; gap: 18px; padding: 22px; background: #f6f5f2; border: 1px solid #e2dfd6; border-radius: 14px; margin-bottom: 28px; }
+.request-recipient h2 { font-size: 1.4rem; overflow-wrap: anywhere; margin: 2px 0 7px; }
+.request-recipient p { margin: 0; color: #58616a; }
+.request-recipient a { color: #384b56; }
+.request-field { margin-bottom: 23px; }
+.request-field > label { display: block; margin-bottom: 9px; font-weight: 600; }
+.required-label { color: #58616a; font-weight: 400; font-size: .8rem; }
+.commission-request-form textarea { resize: vertical; min-height: 150px; }
+.commission-request-form input[type=file] { max-width: 100%; font: inherit; }
+.field-help { font-size: .85rem; color: #58616a; }
+.field-errors, .flow-error-summary { color: #8c2525; }
+.field-errors ul, .flow-error-summary ul { padding-left: 22px; }
+.flow-error-summary { background: #fff0ef; border: 1px solid #e9b8b3; border-radius: 10px; padding: 18px; margin-bottom: 24px; }
+.flow-error-summary p { margin: 5px 0; }
+.flow-notice { padding: 18px; border: 1px solid #e1c99c; border-radius: 10px; background: #fff7e9; }
+.request-next-step { padding-top: 8px; font-size: .9rem; color: #58616a; }
+.artist-profile-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 15px 0 22px; }
+.artist-discovery a:focus-visible, .flow-button:focus-visible, .artist-discovery input:focus-visible, .artist-discovery textarea:focus-visible { outline: 3px solid #b89550; outline-offset: 3px; }
+@media (max-width: 600px) {
+    .artist-discovery { padding: 26px 16px 44px; }
+    .artist-search { align-items: stretch; gap: 10px; padding: 16px; }
+    .artist-search > div { flex-basis: 100%; }
+    .portfolio-heading { padding: 22px 18px; }
+    .portfolio-heading .artist-identity { align-items: flex-start; }
+    .artist-avatar-large { flex-basis: 68px; width: 68px; height: 68px; }
+    .portfolio-actions { flex-direction: column; align-items: stretch; }
+    .portfolio-featured { grid-template-columns: 1fr; padding: 18px; }
+    .request-recipient { padding: 17px; gap: 12px; }
+    .request-recipient a { overflow-wrap: anywhere; }
+}

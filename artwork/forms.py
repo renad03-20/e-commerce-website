@@ -42,6 +42,11 @@ class CommissionRequestForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+        self.fields['title'].label = 'Request title'
+        self.fields['requirements'].label = 'What would you like the artist to create?'
+        self.fields['reference_image'].label = 'Reference image (optional)'
+        self.fields['budget'].label = 'Your budget in USD (optional)'
+        self.fields['desired_deadline'].label = 'Preferred deadline (optional)'
 
 
 class CommissionAcceptForm(forms.Form):

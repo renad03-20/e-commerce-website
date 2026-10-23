@@ -1,3 +1,7 @@
+from django.core.paginator import Paginator
+from django.db.models import Prefetch
+from accounts.models import UserProfile
+from .permissions import artist_accounts, is_artist_account
 from django.db import transaction
 from django.views.decorators.http import require_POST
 from orders.cancellation import PurchaseError, cancel_purchase, checkout, closed, require_fulfillable
@@ -33,7 +37,7 @@ import stripe
 from django.conf import settings
 
 def is_artist(user):
-    return user.groups.filter(name='Artists').exists() or user.is_superuser
+    return is_artist_account(user)
 
 @login_required
 def artwork_list(request):
@@ -63,7 +67,8 @@ def artwork_detail(request, pk):
     
     context = {
         'artwork': artwork,
-        'related_artworks': Artwork.objects.filter(category=artwork.category).exclude(pk=pk)[:4]
+        'related_artworks': Artwork.objects.filter(category=artwork.category).exclude(pk=pk)[:4],
+        'artist_accepting_commissions': is_artist(artwork.artist) and bool(getattr(getattr(artwork.artist, 'userprofile', None), 'is_available_for_commissions', False))
     }
     return render(request, 'products/artwork_detail.html', context)
 
@@ -207,73 +212,29 @@ def artist_dashboard(request):
     }
     return render(request, 'products/artist_dashboard.html', context)
 
-@login_required
 def user_view_of_artist(request, artist_id):
-    artist = get_object_or_404(User, id=artist_id)
-
-    artworks = Artwork.objects.filter(
-        artist=artist
-    ).order_by('-created_at')
-
-    # check user profile for commission availability 
+    artist = get_object_or_404(User, pk=artist_id)
+    if not is_artist(artist):
+        messages.error(request, 'This account is not an active artist.')
+        return redirect('artist_list')
+    # Keep existing profile POST links working; authentication and all recipient
+    # checks live in the dedicated request view.
+    if request.method == 'POST':
+        return commission_request(request, artist_id)
     artist_profile = getattr(artist, 'userprofile', None)
-
-    form = CommissionRequestForm()
-    if request.method == 'POST' and 'submit_commission' in request.POST:
-        if not artist_profile or not artist_profile.is_available_for_commissions:
-            messages.error(request, "This artist is not accepting commissions right now.")
-            return redirect('user_view_of_artist', artist_id=artist_id)
-        if request.user == artist:
-            messages.error(request, "You can't request a commission from yourself.")
-            return redirect('user_view_of_artist', artist_id=artist_id)
-
-        form = CommissionRequestForm(request.POST, request.FILES)
-        if form.is_valid():
-            commission = form.save(commit=False)
-            commission.sender = request.user
-            commission.receiver = artist
-            commission.status = CustomRequest.STATUS_REQUESTED
-            commission.save()
-            CommissionStatusHistory.objects.create(
-                commission=commission,
-                from_status='',
-                to_status=commission.status,
-                changed_by=request.user,
-                note='Commission request submitted.',
-            )
-            _notify_commission(
-                commission,
-                subject=f"New commission request from {request.user.username}",
-                message=f"You received a new commission request: {commission.title}.",
-                to_user=artist,
-            )
-
-            messages.success(request, f"Your request has been sent to {artist.username}!")
-            return redirect('commission_detail', commission_id=commission.id)
-
-
-    artist_order_items = OrderItem.objects.filter(
-        artwork__artist=artist
+    artworks = Artwork.objects.filter(artist=artist).order_by('-created_at')
+    best_seller = (
+        OrderItem.objects.filter(artwork__artist=artist, order__paid=True)
+        .exclude(order__status='cancelled')
+        .values('artwork_id').annotate(total_sold=Sum('quantity'))
+        .order_by('-total_sold', 'artwork_id').first()
     )
-
-    best_selling = artist_order_items.values(
-        'artwork'
-    ).annotate(
-        total_sold=Sum('quantity')
-    ).order_by('-total_sold').first()
-
-    best_selling_artwork = None
-    if best_selling:
-        best_selling_artwork = Artwork.objects.get(id=best_selling['artwork'])
-
-    context = {
-        'form': form,
-        'artist_profile': artist_profile,
-        'artist': artist,
-        'artworks': artworks,
-        'best_selling_artwork': best_selling_artwork,
-    }
-    return render(request, 'products/user_view_of_artist.html', context)
+    best_selling_artwork = artworks.filter(pk=best_seller['artwork_id']).first() if best_seller else None
+    return render(request, 'products/user_view_of_artist.html', {
+        'artist': artist, 'artist_profile': artist_profile,
+        'artworks': artworks, 'best_selling_artwork': best_selling_artwork,
+        'accepting_commissions': bool(artist_profile and artist_profile.is_available_for_commissions),
+    })
 
 
 def _commission_participant_guard(request, commission):
@@ -318,7 +279,8 @@ def commission_list(request):
 
     context = {
         'sent_commissions': sent_commissions,
-        'received_commissions': received_commissions,
+        'received_commissions': received_commissions if is_artist(request.user) else CustomRequest.objects.none(),
+        'is_artist': is_artist(request.user),
     }
     return render(request, 'commissions/commission_list.html', context)
 
@@ -331,7 +293,8 @@ def commission_detail(request, commission_id):
 
     context = {
         'commission': commission,
-        'is_artist': request.user == commission.receiver,
+        'is_artist': is_artist(request.user),
+        'is_commission_artist': is_artist(request.user) and request.user.pk == commission.receiver_id,
         'is_buyer': request.user == commission.sender,
         'accept_form': CommissionAcceptForm(
             initial={'price': commission.price, 'artist_deadline': commission.artist_deadline}
@@ -380,6 +343,7 @@ def commission_message_create(request, commission_id):
 
 
 @login_required
+@require_POST
 @transaction.atomic
 def commission_accept(request, commission_id):
     commission = get_object_or_404(CustomRequest.objects.select_for_update(), id=commission_id)
@@ -387,7 +351,7 @@ def commission_accept(request, commission_id):
         messages.error(request, 'This commission is cancelled or cancellation is in progress.')
         return redirect('commission_detail', commission_id=commission_id)
 
-    if request.user != commission.receiver:
+    if not is_artist(request.user) or request.user.pk != commission.receiver_id:
         messages.error(request, "Only the artist can accept this commission.")
         return redirect('commission_detail', commission_id=commission_id)
 
@@ -431,6 +395,7 @@ def commission_accept(request, commission_id):
 
 
 @login_required
+@require_POST
 @transaction.atomic
 def commission_decline(request, commission_id):
     commission = get_object_or_404(CustomRequest.objects.select_for_update(), id=commission_id)
@@ -438,7 +403,7 @@ def commission_decline(request, commission_id):
         messages.error(request, 'This commission is cancelled or cancellation is in progress.')
         return redirect('commission_detail', commission_id=commission_id)
 
-    if request.user != commission.receiver:
+    if not is_artist(request.user) or request.user.pk != commission.receiver_id:
         messages.error(request, "Only the artist can decline this commission.")
         return redirect('commission_detail', commission_id=commission_id)
 
@@ -570,6 +535,7 @@ def commission_payment_canceled(request, commission_id):
 
 
 @login_required
+@require_POST
 @transaction.atomic
 def commission_delivery_create(request, commission_id):
     commission = get_object_or_404(CustomRequest.objects.select_for_update(), id=commission_id)
@@ -577,7 +543,7 @@ def commission_delivery_create(request, commission_id):
         messages.error(request, 'This commission is cancelled or cancellation is in progress.')
         return redirect('commission_detail', commission_id=commission_id)
 
-    if request.user != commission.receiver:
+    if not is_artist(request.user) or request.user.pk != commission.receiver_id:
         messages.error(request, "Only the artist can deliver this commission.")
         return redirect('commission_detail', commission_id=commission_id)
 
@@ -698,7 +664,7 @@ def commission_mark_complete(request, commission_id):
 @transaction.atomic
 def commission_start_work(request, commission_id):
     commission = get_object_or_404(CustomRequest.objects.select_for_update(), pk=commission_id)
-    if request.user.id != commission.receiver_id:
+    if not is_artist(request.user) or request.user.pk != commission.receiver_id:
         messages.error(request, "Only the artist can start this commission.")
         return redirect('commission_list')
     try:
@@ -713,4 +679,61 @@ def commission_start_work(request, commission_id):
         commission.save()
         messages.success(request, 'Work started. Buyer cancellation is now closed.')
     return redirect('commission_detail', commission_id=commission.pk)
+
+
+
+def artist_list(request):
+    artists = artist_accounts().annotate(artwork_count=Count('artworks', distinct=True))
+    query = request.GET.get('q', '').strip()[:100]
+    open_only = request.GET.get('open') == '1'
+    if query:
+        artists = artists.filter(username__icontains=query)
+    if open_only:
+        artists = artists.filter(userprofile__is_available_for_commissions=True)
+    artists = artists.order_by('username', 'pk').prefetch_related(
+        Prefetch('artworks', queryset=Artwork.objects.order_by('-created_at', '-pk')[:3], to_attr='portfolio_preview')
+    )
+    page = Paginator(artists, 12).get_page(request.GET.get('page'))
+    return render(request, 'products/artist_list.html', {
+        'page_obj': page, 'query': query, 'open_only': open_only,
+    })
+
+
+@login_required
+@transaction.atomic
+def commission_request(request, artist_id):
+    artist = get_object_or_404(User, pk=artist_id)
+    if not is_artist(artist):
+        messages.error(request, 'Commissions can only be sent to an active artist.')
+        return redirect('artist_list')
+    if request.user.pk == artist.pk:
+        messages.error(request, "You can't request a commission from yourself.")
+        return redirect('user_view_of_artist', artist_id=artist.pk)
+    artist_profile = UserProfile.objects.select_for_update().filter(user=artist).first()
+    accepting = bool(artist_profile and artist_profile.is_available_for_commissions)
+    form = CommissionRequestForm(request.POST if request.method == 'POST' else None, request.FILES if request.method == 'POST' else None)
+    if request.method == 'POST':
+        if not accepting:
+            form.is_valid()
+            form.add_error(None, 'This artist is not accepting commissions right now. Your request has not been sent.')
+        elif form.is_valid():
+            commission = form.save(commit=False)
+            commission.sender = request.user
+            commission.receiver = artist
+            commission.status = CustomRequest.STATUS_REQUESTED
+            commission.save()
+            CommissionStatusHistory.objects.create(
+                commission=commission, from_status='', to_status=commission.status,
+                changed_by=request.user, note='Commission request submitted.',
+            )
+            _notify_commission(
+                commission, subject=f'New commission request from {request.user.username}',
+                message=f'You received a new commission request: {commission.title}.', to_user=artist,
+            )
+            messages.success(request, f'Your request has been sent to {artist.username}!')
+            return redirect('commission_detail', commission_id=commission.pk)
+    return render(request, 'commissions/commission_request.html', {
+        'artist': artist, 'artist_profile': artist_profile,
+        'accepting_commissions': accepting, 'form': form,
+    })
 

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Request a Commission from {{ artist.username }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/artist_commissions.css' %}">{% endblock %}
+{% block content %}
+<div class="artist-discovery request-layout">
+    <a class="flow-back" href="{% url 'user_view_of_artist' artist.pk %}">← Back to {{ artist.username }}’s Portfolio</a>
+    <header class="discovery-heading"><p class="eyebrow">Your idea, their style</p><h1>Request a commission</h1><p>Tell the artist what you have in mind. Payment comes after they accept and set a price.</p></header>
+    <aside class="request-recipient" aria-label="Your selected artist">
+        {% if artist_profile.avatar %}<img class="artist-avatar" src="{{ artist_profile.avatar.url }}" alt="">
+        {% else %}<span class="artist-avatar avatar-initial" aria-hidden="true">{{ artist.username|first|upper }}</span>{% endif %}
+        <div><p>Sending your request to</p><h2>{{ artist.username }}</h2><a href="{% url 'user_view_of_artist' artist.pk %}">View {{ artist.username }}’s Portfolio</a></div>
+    </aside>
+    {% if not accepting_commissions %}<p class="flow-notice" role="status">{{ artist.username }} is not accepting new commissions right now. You can explore their portfolio or <a href="{% url 'artist_list' %}?open=1">find an available artist</a>.</p>{% endif %}
+    {% if accepting_commissions or request.method == 'POST' %}
+    <form method="post" enctype="multipart/form-data" action="{% url 'commission_request' artist.pk %}" class="commission-request-form">
+        {% csrf_token %}
+        {% if form.errors %}<div class="flow-error-summary" role="alert"><strong>Your request has not been sent.</strong><p>Please check the details below.</p>{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+        <div class="request-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required-label">(required)</span>{% endif %}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="field-help">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<div class="field-errors">{{ field.errors }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <p class="request-next-step">{{ artist.username }} will review your idea and accept or decline the request. You can follow it in My Commissions.</p>
+        <button type="submit" class="flow-button" {% if not accepting_commissions %}disabled{% endif %}>Send Request to {{ artist.username }}</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

@@ -29,7 +29,8 @@
             <a href="{% url 'artwork_detail' artwork.pk %}">
                 <img src="{{ artwork.thumbnail.url }}" alt="{{ artwork.title }}" loading="lazy">
                 <h3>{{ artwork.title }}</h3>
-                <p class="artist">By {{ artwork.artist.username }}</p>
+                </a>
+            <p class="artist">By <a href="{% url 'user_view_of_artist' artwork.artist_id %}">{{ artwork.artist.username }}</a></p>
                 <p class="price">${{ artwork.price }}</p>
                 <div class="artwork-actions">
                     {% if artwork.stock > 0 %}
@@ -44,7 +45,6 @@
                             <span class="out-of-stock">Out of Stock</span>
                     {% endif %}
                 </div>
-            </a>
         </div>
         {% empty %}
         <p>No artwork available at the moment.</p>

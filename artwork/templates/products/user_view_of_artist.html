@@ -1,77 +1,43 @@
 {% extends 'base.html' %}
 {% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/user_view_of_artist.css' %}">
-{% endblock %}
-
+{% block title %}{{ artist.username }} - Artist Portfolio{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/artist_commissions.css' %}">{% endblock %}
 {% block content %}
-<div class="artist-header">
-    <div class="container"> 
-        <h1 class="display-4">Artworks by {{ artworks.0.artist.username }}</h1>
-        <p class="lead text-muted">Explore the full collection and creative journey of this artist.</p>
-    </div>
-</div>
-
-<div class="container">
+<div class="artist-discovery">
+    <a class="flow-back" href="{% url 'artist_list' %}">← All Artists</a>
+    <header class="portfolio-heading">
+        <div class="artist-identity">
+            {% if artist_profile.avatar %}<img class="artist-avatar artist-avatar-large" src="{{ artist_profile.avatar.url }}" alt="">
+            {% else %}<span class="artist-avatar artist-avatar-large avatar-initial" aria-hidden="true">{{ artist.username|first|upper }}</span>{% endif %}
+            <div><p class="eyebrow">Artist portfolio</p><h1>{{ artist.username }}</h1>
+                {% if accepting_commissions %}<span class="commission-availability availability-open">Open for commissions</span>
+                {% else %}<span class="commission-availability">Commissions currently closed</span>{% endif %}
+            </div>
+        </div>
+        {% if artist_profile.bio %}<div class="portfolio-bio">{{ artist_profile.bio|linebreaksbr }}</div>{% endif %}
+        <div class="portfolio-actions">
+            <a class="flow-button flow-button-secondary" href="#portfolio">Explore the Work</a>
+            {% if user == artist %}<a class="flow-button" href="{% url 'accounts:profile' %}">Manage Commission Availability</a>
+            {% elif accepting_commissions %}<a class="flow-button" href="{% url 'commission_request' artist.pk %}">Request a Commission from {{ artist.username }}</a>
+            {% else %}<p>This artist is not taking new commission requests right now.</p>{% endif %}
+        </div>
+    </header>
     {% if best_selling_artwork %}
-    <div class="best-seller-section">
-        <div class="best-seller-img" style="flex: 1; max-width: 400px;">
-            <img src="{{ best_selling_artwork.image.url }}" alt="Best Seller">
-        </div>
-        <div class="best-seller-info" style="flex: 2;">
-            <span class="best-seller-badge"><i class="fa-solid fa-crown"></i> Collector's Favorite</span>
-            <h2 class="display-6">{{ best_selling_artwork.title }}</h2>
-            <p class="text-muted">{{ best_selling_artwork.description|truncatewords:40 }}</p>
-            <p class="h3 mb-4">${{ best_selling_artwork.price }}</p>
-            <a href="{% url 'artwork_detail' best_selling_artwork.pk %}" class="btn btn-dark btn-lg px-5">View Masterpiece</a>
-        </div>
-    </div>
+    <section class="portfolio-featured" aria-labelledby="featured-title">
+        <a href="{% url 'artwork_detail' best_selling_artwork.pk %}"><img src="{{ best_selling_artwork.image.url }}" alt="{{ best_selling_artwork.title }}"></a>
+        <div><p class="eyebrow">Collector’s Favorite</p><h2 id="featured-title">{{ best_selling_artwork.title }}</h2><p>{{ best_selling_artwork.description|truncatewords:35 }}</p><a href="{% url 'artwork_detail' best_selling_artwork.pk %}">View Artwork</a></div>
+    </section>
     {% endif %}
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h3">Full Collection</h2>
-        <span class="text-muted">{{ artworks.count }} Pieces</span>
-    </div>
-
-    <div class="artwork-grid">
-        {% for artwork in artworks %}
-        <div class="artwork-card">
-            <div class="card-img">
-                <a href="{% url 'artwork_detail' artwork.pk %}">
-                    <img src="{{ artwork.image.url }}" alt="{{ artwork.title }}" loading="lazy">
-                </a>
-            </div>
-            <div class="p-4">
-                <h6 class="mb-2">{{ artwork.title }}</h6>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="pricing">${{ artwork.price }}</span>
-                    <a href="{% url 'cart:add_to_cart' artwork.id %}" class="add-to-cart-btn">
-                        <i class="fa-solid fa-cart-plus"></i>
-                    </a>
-                </div>
-            </div>
+    <section id="portfolio" class="portfolio-section" aria-labelledby="portfolio-title">
+        <div class="portfolio-section-heading"><h2 id="portfolio-title">The Portfolio</h2><span>{{ artworks.count }} artwork{{ artworks.count|pluralize }}</span></div>
+        <div class="artist-directory-grid portfolio-art-grid">
+            {% for artwork in artworks %}
+            <article class="portfolio-art-card">
+                <a href="{% url 'artwork_detail' artwork.pk %}"><img src="{{ artwork.image.url }}" alt="{{ artwork.title }}" loading="lazy"><h3>{{ artwork.title }}</h3></a>
+                <div class="portfolio-art-meta"><span>${{ artwork.price|floatformat:2 }}</span>{% if artwork.stock > 0 %}<span>Available</span>{% else %}<span>Sold out</span>{% endif %}</div>
+            </article>
+            {% empty %}<div class="flow-empty"><p>This artist has not added artworks yet.</p></div>{% endfor %}
         </div>
-        {% empty %}
-        <div class="text-center py-5">
-            <p class="lead">This artist hasn't uploaded any artworks yet.</p>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-<div class="custom-commission-container">
-    {% if artist_profile.is_available_for_commissions %}
-        <section class="commission-section mt-5 p-4 bg-light rounded">
-            <h3>Request a Custom Piece from {{ artist.username }}</h3>
-            <p class="text-muted">Includes up to 2 free revisions. Payment is collected after the artist accepts your request.</p>
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" name="submit_commission" class="btn btn-success">
-                    Send Request
-                </button>
-            </form>
-        </section>
-    {% endif %}
+    </section>
 </div>
 {% endblock %}

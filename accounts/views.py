@@ -1,3 +1,5 @@
+from django.db import transaction
+from artwork.permissions import is_artist_account
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -6,35 +8,26 @@ from .forms import UserProfileForm, AddressForm, CommissionStatusForm
 from orders.models import Order
 
 @login_required
+@transaction.atomic
 def profile(request):
-    """User profile overview"""
-    try:
-        profile = request.user.userprofile
-    except UserProfile.DoesNotExist:
-        profile = UserProfile.objects.create(user=request.user)
-
-    # Handle the commission toggle form
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile = UserProfile.objects.select_for_update().get(pk=profile.pk)
+    artist_role = is_artist_account(request.user)
+    commission_form = CommissionStatusForm(instance=profile) if artist_role else None
     if request.method == 'POST' and 'update_commission' in request.POST:
+        if not artist_role:
+            messages.error(request, 'Only artist accounts can accept commission requests.')
+            return redirect('accounts:profile')
         commission_form = CommissionStatusForm(request.POST, instance=profile)
         if commission_form.is_valid():
             commission_form.save()
-            messages.success(request, "Commission status updated!")
-            return redirect('accounts:profile') 
-    else:
-        commission_form = CommissionStatusForm(instance=profile)
-    
-    # Get user's recent orders
-    recent_orders = Order.objects.filter(user=request.user).order_by('-created')[:5]
-    
-    # Get user's addresses
-    addresses = Address.objects.filter(user=request.user)
-    
-    context = {
-        'profile': profile,
-        'recent_orders': recent_orders,
-        'addresses': addresses,
-    }
-    return render(request, 'accounts/profile.html', context)
+            messages.success(request, 'Commission availability updated!')
+            return redirect('accounts:profile')
+    return render(request, 'accounts/profile.html', {
+        'profile': profile, 'commission_form': commission_form, 'is_artist': artist_role,
+        'recent_orders': Order.objects.filter(user=request.user).order_by('-created')[:5],
+        'addresses': Address.objects.filter(user=request.user),
+    })
 
 @login_required
 def profile_edit(request):
