@@ -589,74 +589,98 @@ def commission_delivery_create(request, commission_id):
 
 
 @login_required
+@require_POST
+@transaction.atomic
 def commission_request_revision(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
-    if request.user != commission.sender:
+    commission = get_object_or_404(
+        CustomRequest.objects.select_for_update(), pk=commission_id,
+    )
+    if request.user.pk != commission.sender_id:
         messages.error(request, "Only the buyer can request revisions.")
-        return redirect('commission_detail', commission_id=commission_id)
+        return redirect('commission_detail', commission_id=commission.pk)
+
+    try:
+        require_fulfillable(commission)
+    except PurchaseError as exc:
+        messages.error(request, str(exc))
+        return redirect('commission_detail', commission_id=commission.pk)
 
     if commission.status != CustomRequest.STATUS_DELIVERED:
         messages.error(request, "Revisions can only be requested after delivery.")
-        return redirect('commission_detail', commission_id=commission_id)
+        return redirect('commission_detail', commission_id=commission.pk)
 
     if not commission.can_request_revision():
         messages.error(request, "You've reached the revision limit.")
-        return redirect('commission_detail', commission_id=commission_id)
+        return redirect('commission_detail', commission_id=commission.pk)
 
-    if request.method == 'POST':
-        form = CommissionRevisionRequestForm(request.POST)
-        if form.is_valid():
-            revision = form.save(commit=False)
-            revision.commission = commission
-            revision.requested_by = request.user
-            revision.save()
-            commission.revision_count += 1
-            _log_commission_status(
-                commission,
-                CustomRequest.STATUS_REVISION_REQUESTED,
-                request.user,
-                note='Revision requested.',
-            )
-            commission.save()
-            _notify_commission(
-                commission,
-                subject="Revision requested",
-                message=f"The buyer requested a revision for '{commission.title}'.",
-                to_user=commission.receiver,
-            )
-            messages.success(request, 'Revision request sent to the artist.')
-        else:
-            messages.error(request, 'Please describe the revision you need.')
-    return redirect('commission_detail', commission_id=commission_id)
+    form = CommissionRevisionRequestForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, 'Please describe the revision you need.')
+        return redirect('commission_detail', commission_id=commission.pk)
+
+    revision = form.save(commit=False)
+    revision.commission = commission
+    revision.requested_by = request.user
+    revision.save()
+    commission.revision_count += 1
+    _log_commission_status(
+        commission, CustomRequest.STATUS_REVISION_REQUESTED,
+        request.user, note='Revision requested.',
+    )
+    commission.save()
+    transaction.on_commit(lambda: _notify_commission(
+        commission,
+        subject="Revision requested",
+        message=f"The buyer requested a revision for '{commission.title}'.",
+        to_user=commission.receiver,
+    ))
+    messages.success(request, 'Revision request sent to the artist.')
+    return redirect('commission_detail', commission_id=commission.pk)
 
 
 @login_required
+@require_POST
+@transaction.atomic
 def commission_mark_complete(request, commission_id):
-    commission = get_object_or_404(CustomRequest, id=commission_id)
-    if request.user != commission.sender:
+    commission = get_object_or_404(
+        CustomRequest.objects.select_for_update(), pk=commission_id,
+    )
+    if request.user.pk != commission.sender_id:
         messages.error(request, "Only the buyer can mark this as complete.")
-        return redirect('commission_detail', commission_id=commission_id)
+        return redirect('commission_detail', commission_id=commission.pk)
+
+    if commission.status == CustomRequest.STATUS_COMPLETED:
+        messages.info(request, 'This commission is already complete.')
+        return redirect('commission_detail', commission_id=commission.pk)
+
+    try:
+        require_fulfillable(commission)
+    except PurchaseError as exc:
+        messages.error(request, str(exc))
+        return redirect('commission_detail', commission_id=commission.pk)
 
     if commission.status != CustomRequest.STATUS_DELIVERED:
         messages.error(request, "You can only complete a delivered commission.")
-        return redirect('commission_detail', commission_id=commission_id)
+        return redirect('commission_detail', commission_id=commission.pk)
+
+    if commission.revisions.filter(resolved_at__isnull=True).exists():
+        messages.error(request, 'The artist must resolve the requested revision before you can complete this commission.')
+        return redirect('commission_detail', commission_id=commission.pk)
 
     commission.completed_at = timezone.now()
     _log_commission_status(
-        commission,
-        CustomRequest.STATUS_COMPLETED,
-        request.user,
-        note='Commission completed.',
+        commission, CustomRequest.STATUS_COMPLETED,
+        request.user, note='Commission completed.',
     )
     commission.save()
-    _notify_commission(
+    transaction.on_commit(lambda: _notify_commission(
         commission,
         subject="Commission completed",
         message=f"The commission '{commission.title}' was marked complete by the buyer.",
         to_user=commission.receiver,
-    )
+    ))
     messages.success(request, 'Commission marked as complete. Thank you!')
-    return redirect('commission_detail', commission_id=commission_id)
+    return redirect('commission_detail', commission_id=commission.pk)
 
 
 @login_required
