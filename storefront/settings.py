@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'artwork.private_files.LegacyCommissionMediaGuard',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -156,7 +157,10 @@ LOGIN_URL = 'login'  # URL to redirect to for login
 
 # Media files (Uploaded images)
 MEDIA_URL = '/media/'  # URL prefix for media files
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Path where media is stored
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Commission uploads are never served as public media.
+PRIVATE_MEDIA_ROOT = config('PRIVATE_MEDIA_ROOT', default=str(BASE_DIR / 'private_media'))  # Path where media is stored
 
 # Email settings
 if DEBUG:

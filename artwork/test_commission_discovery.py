@@ -25,7 +25,7 @@ class CommissionDiscoveryTests(TestCase):
         UserProfile.objects.create(user=self.buyer)
         self.art=Artwork.objects.create(artist=self.artist,title='Botanical Study',description='A watercolor study.',price='40',stock=0,image='test-art.jpg')
         self.media=TemporaryDirectory();self.addCleanup(self.media.cleanup)
-        settings=override_settings(MEDIA_ROOT=self.media.name);settings.enable();self.addCleanup(settings.disable)
+        settings=override_settings(MEDIA_ROOT=self.media.name+'/public', PRIVATE_MEDIA_ROOT=self.media.name+'/private');settings.enable();self.addCleanup(settings.disable)
         notify=patch('artwork.views._notify_commission');self.notify=notify.start();self.addCleanup(notify.stop)
         self.client.force_login(self.buyer)
         self.data={'title':'A custom landscape','requirements':'A landscape with mountains and a blue sky.','budget':'80.00'}

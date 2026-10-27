@@ -27,3 +27,6 @@ env/
 .idea/
 *.swp
 .DS_Store
+
+# Private commission uploads
+/private_media/

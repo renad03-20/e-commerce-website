@@ -3,6 +3,7 @@ from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFill
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from .private_storage import private_commission_storage
 
 # Create your models here.
 class Category(models.Model):
@@ -85,7 +86,7 @@ class CustomRequest(models.Model):
     )
  
     title = models.CharField(max_length=200)
-    reference_image = models.ImageField(upload_to='commission_refs/', blank=True, null=True)
+    reference_image = models.ImageField(upload_to='commission_refs/', storage=private_commission_storage, blank=True, null=True)
     requirements = models.TextField(max_length=600)
     budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     desired_deadline = models.DateField(blank=True, null=True)
@@ -132,7 +133,7 @@ class CommissionMessage(models.Model):
     commission = models.ForeignKey(CustomRequest, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='commission_messages')
     body = models.TextField(max_length=2000)
-    attachment = models.FileField(upload_to='commission_messages/', blank=True, null=True)
+    attachment = models.FileField(upload_to='commission_messages/', storage=private_commission_storage, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -146,7 +147,7 @@ class CommissionDelivery(models.Model):
     commission = models.ForeignKey(CustomRequest, on_delete=models.CASCADE, related_name='deliveries')
     delivered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='commission_deliveries')
     message = models.TextField(max_length=2000, blank=True)
-    delivery_file = models.FileField(upload_to='commission_deliveries/', blank=True, null=True)
+    delivery_file = models.FileField(upload_to='commission_deliveries/', storage=private_commission_storage, blank=True, null=True)
     external_link = models.URLField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

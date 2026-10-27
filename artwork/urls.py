@@ -1,7 +1,9 @@
 from django.urls import path
 from . import views
+from .private_files import commission_file
 
 urlpatterns = [
+    path('commission-files/<path:file_name>', commission_file, name='commission_file'),
     path('artists/', views.artist_list, name='artist_list'),
     path('artist/<int:artist_id>/commission/', views.commission_request, name='commission_request'),
     path('commissions/<int:commission_id>/start/', views.commission_start_work, name='commission_start_work'),
