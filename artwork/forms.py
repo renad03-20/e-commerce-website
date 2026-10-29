@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from .models import (
     Artwork,
@@ -37,6 +38,10 @@ class CommissionRequestForm(forms.ModelForm):
             ),
             'desired_deadline': forms.DateInput(attrs={'type': 'date'}),
         }
+        error_messages = {
+            'title': {'required': 'Enter a request title.'},
+            'requirements': {'required': 'Describe what you would like the artist to create.'},
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,6 +52,22 @@ class CommissionRequestForm(forms.ModelForm):
         self.fields['reference_image'].label = 'Reference image (optional)'
         self.fields['budget'].label = 'Your budget in USD (optional)'
         self.fields['desired_deadline'].label = 'Preferred deadline (optional)'
+        self.fields['budget'].widget.attrs['min'] = '0'
+        self.fields['budget'].help_text = 'Leave blank if you are unsure. Your budget cannot be negative.'
+        self.fields['desired_deadline'].widget.attrs['min'] = timezone.localdate().isoformat()
+        self.fields['desired_deadline'].help_text = 'Choose today or a later date, or leave blank.'
+
+    def clean_budget(self):
+        budget = self.cleaned_data.get('budget')
+        if budget is not None and budget < 0:
+            raise ValidationError('Your budget cannot be negative.', code='negative_budget')
+        return budget
+
+    def clean_desired_deadline(self):
+        deadline = self.cleaned_data.get('desired_deadline')
+        if deadline is not None and deadline < timezone.localdate():
+            raise ValidationError('Choose today or a later date for your preferred deadline.', code='past_deadline')
+        return deadline
 
 
 class CommissionAcceptForm(forms.Form):

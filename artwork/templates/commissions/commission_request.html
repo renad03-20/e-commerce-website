@@ -13,9 +13,20 @@
     </aside>
     {% if not accepting_commissions %}<p class="flow-notice" role="status">{{ artist.username }} is not accepting new commissions right now. You can explore their portfolio or <a href="{% url 'artist_list' %}?open=1">find an available artist</a>.</p>{% endif %}
     {% if accepting_commissions or request.method == 'POST' %}
-    <form method="post" enctype="multipart/form-data" action="{% url 'commission_request' artist.pk %}" class="commission-request-form">
+    <form method="post" enctype="multipart/form-data" action="{% url 'commission_request' artist.pk %}" class="commission-request-form" novalidate>
         {% csrf_token %}
-        {% if form.errors %}<div class="flow-error-summary" role="alert"><strong>Your request has not been sent.</strong><p>Please check the details below.</p>{{ form.non_field_errors }}</div>{% endif %}
+        {% if form.errors %}
+        <div class="flow-error-summary" role="alert">
+            <strong>Your request has not been sent.</strong>
+            <p>Please correct the following details:</p>
+            {{ form.non_field_errors }}
+            <ul>
+                {% for field in form %}{% for error in field.errors %}
+                <li><a href="#{{ field.id_for_label }}">{{ field.label }}: {{ error }}</a></li>
+                {% endfor %}{% endfor %}
+            </ul>
+        </div>
+        {% endif %}
         {% for field in form %}
         <div class="request-field">
             <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required-label">(required)</span>{% endif %}</label>

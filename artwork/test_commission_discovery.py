@@ -118,7 +118,8 @@ class CommissionDiscoveryTests(TestCase):
 
     def test_empty_post_shows_field_errors(self):
         response=self.client.post(self.request_url(),{})
-        self.assertContains(response,'This field is required.',count=2)
+        self.assertContains(response,'Enter a request title.')
+        self.assertContains(response,'Describe what you would like the artist to create.')
         self.assertEqual(CustomRequest.objects.count(),0)
 
     def test_artist_closes_availability_before_submit(self):
