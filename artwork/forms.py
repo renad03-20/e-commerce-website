@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from decimal import Decimal
 
 from .models import (
     Artwork,
@@ -52,15 +53,18 @@ class CommissionRequestForm(forms.ModelForm):
         self.fields['reference_image'].label = 'Reference image (optional)'
         self.fields['budget'].label = 'Your budget in USD (optional)'
         self.fields['desired_deadline'].label = 'Preferred deadline (optional)'
-        self.fields['budget'].widget.attrs['min'] = '0'
-        self.fields['budget'].help_text = 'Leave blank if you are unsure. Your budget cannot be negative.'
+        self.fields['budget'].widget.attrs['min'] = '0.01'
+        self.fields['budget'].help_text = 'Leave blank if you are unsure. Otherwise, enter a budget greater than zero.'
         self.fields['desired_deadline'].widget.attrs['min'] = timezone.localdate().isoformat()
         self.fields['desired_deadline'].help_text = 'Choose today or a later date, or leave blank.'
 
     def clean_budget(self):
         budget = self.cleaned_data.get('budget')
-        if budget is not None and budget < 0:
-            raise ValidationError('Your budget cannot be negative.', code='negative_budget')
+        if budget is not None and budget <= 0:
+            raise ValidationError(
+                'Your budget must be greater than zero.',
+                code='non_positive_budget',
+            )
         return budget
 
     def clean_desired_deadline(self):
@@ -71,7 +75,14 @@ class CommissionRequestForm(forms.ModelForm):
 
 
 class CommissionAcceptForm(forms.Form):
-    price = forms.DecimalField(max_digits=10, decimal_places=2)
+    price = forms.DecimalField(
+    max_digits=10,
+    decimal_places=2,
+    min_value=Decimal('0.01'),
+    error_messages={
+        'min_value': 'The commission price must be greater than zero.',
+    },
+        )
     artist_deadline = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
     note = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3}))
 

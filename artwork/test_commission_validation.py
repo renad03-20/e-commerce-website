@@ -74,7 +74,7 @@ class CommissionRequestValidationTests(TestCase):
         for budget in ('-0.01', '-100.00'):
             with self.subTest(budget=budget):
                 response = self.assert_rejected(dict(self.data, budget=budget), ['budget'])
-                self.assertContains(response, 'Your budget cannot be negative.')
+                self.assertContains(response, 'Your budget must be greater than zero.')
 
     def test_both_invalid_optional_fields_show_errors(self):
         self.assert_rejected(dict(self.data, budget='-1', desired_deadline='2000-01-01'), ['budget', 'desired_deadline'])
@@ -100,10 +100,11 @@ class CommissionRequestValidationTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(commission.desired_deadline, self.today)
 
-    def test_zero_budget_remains_allowed_as_a_nonbinding_preference(self):
-        response = self.client.post(self.url, dict(self.data, budget='0'))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(CustomRequest.objects.get().budget, Decimal('0.00'))
+    def test_zero_budget_is_rejected(self):
+        response = self.assert_rejected(
+            dict(self.data, budget='0'), ['budget']
+        )
+        self.assertContains(response, 'Your budget must be greater than zero.')
 
     def test_future_deadline_and_positive_budget_create_one_request(self):
         response = self.client.post(self.url, self.data)
