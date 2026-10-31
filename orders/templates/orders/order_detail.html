@@ -27,6 +27,15 @@
                     <div class="item-details">
                         <h3>{{ item.artwork_title }}</h3>
                         <p class="artist">By {{ item.artist_name }}</p>
+                        {% if order.paid and order.status != 'cancelled' %}
+                        <div class="item-shipment">
+                            <p><strong>Fulfillment:</strong> {{ item.get_artist_fulfillment_status_display|capfirst }}</p>
+                            {% if item.tracking_number %}<p><strong>Tracking number:</strong> {{ item.tracking_number }}</p>{% endif %}
+                            {% if item.shipping_carrier %}<p><strong>Carrier:</strong> {{ item.shipping_carrier|upper }}</p>{% endif %}
+                            {% if item.shipped_at %}<p><strong>Shipped:</strong> {{ item.shipped_at|date:"M d, Y" }}</p>{% endif %}
+                            {% if item.delivered_at %}<p><strong>Delivered:</strong> {{ item.delivered_at|date:"M d, Y" }}</p>{% endif %}
+                        </div>
+                        {% endif %}
                         <div class="item-meta">
                             <span>Quantity: {{ item.quantity }}</span>
                             <span>Price: ${{ item.price }} each</span>

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Mark Order as Shipped{% endblock %}
+{% block title %}Ship Your Artwork{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/artist_orders.css' %}">
@@ -11,7 +11,7 @@
 <div class="mark-shipped-page">
     <div class="container">
         <div class="shipping-header">
-            <h1>📦 Mark Order as Shipped</h1>
+            <h1>📦 Ship Your Artwork</h1>
             <p>Order #{{ order.order_number }}</p>
         </div>
 
@@ -20,7 +20,7 @@
             <div class="order-summary-card">
                 <h3>Order Summary</h3>
                 <div class="order-items">
-                    {% for item in order.items.all %}
+                    {% for item in artist_items %}
                         {% if item.artwork.artist == user %}
                         <div class="shipping-item">
                             <img src="{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}">
@@ -44,7 +44,7 @@
                     {% csrf_token %}
                     
                     <div class="form-group">
-                        <label for="{{ form.tracking_number.id_for_label }}">Tracking Number *</label>
+                        <label for="{{ form.tracking_number.id_for_label }}">Tracking Number (Optional)</label>
                         {{ form.tracking_number }}
                         {% if form.tracking_number.errors %}
                             <div class="error">{{ form.tracking_number.errors }}</div>
@@ -53,7 +53,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="{{ form.shipping_carrier.id_for_label }}">Shipping Carrier *</label>
+                        <label for="{{ form.shipping_carrier.id_for_label }}">Shipping Carrier (Optional)</label>
                         {{ form.shipping_carrier }}
                         {% if form.shipping_carrier.errors %}
                             <div class="error">{{ form.shipping_carrier.errors }}</div>

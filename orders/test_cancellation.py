@@ -343,6 +343,7 @@ class CancellationTests(TestCase):
         self.assertEqual(self.refund_create.call_count,1)
 
     def test_unrelated_artist_cannot_prepare_or_ship_order(self):
+        self.other.groups.add(Group.objects.get_or_create(name='Artists')[0])
         self.pay();self.client.force_login(self.other)
         for name in ('artist_order_detail','mark_order_shipped'):
             response=self.client.post(reverse(name,args=[self.order.order_number]),{'status':'preparing'})

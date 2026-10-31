@@ -109,6 +109,11 @@ class OrderItem(models.Model):
 
     artwork_title = models.CharField(max_length=255, blank=True)
     artist_name = models.CharField(max_length=255, blank=True)
+    tracking_number = models.CharField(max_length=100, blank=True)
+    shipping_carrier = models.CharField(max_length=100, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    artist_notes = models.TextField(blank=True)
 
     #! artist specific tracking 
     artist_fulfillment_status = models.CharField(

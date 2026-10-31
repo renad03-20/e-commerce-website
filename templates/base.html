@@ -69,6 +69,7 @@
                             {% if is_artist %}
                                 <li><a href="{% url 'artwork_create' %}">Add Artwork</a></li>
                                 <li><a href="{% url 'artist_dashboard' %}">My Dashboard</a></li>
+                                <li><a href="{% url 'artist_orders_dashboard' %}">Manage Orders</a></li>
                             {% endif %}
                             <li><a href="{% url 'logout' %}">Logout</a></li>
                         {% else %}

@@ -1,3 +1,7 @@
+from django.db.models import Sum, Count, Avg, F, ExpressionWrapper, DecimalField, Prefetch
+from .forms import OrderCreateForm, OrderShippingForm, OrderStatusForm
+from .permissions import artist_required
+from .fulfillment import update_artist_fulfillment
 from django.db import transaction
 from django.views.decorators.http import require_POST
 from .cancellation import PurchaseError, cancel_purchase, checkout, confirm_payment, require_fulfillable, update_refund, closed
@@ -171,19 +175,8 @@ def order_created(request, order_number):
 
 @login_required
 def order_list(request):
-    print(f"DEBUG: order list called for user: {request.user} ")
-    #! Display user's order history
-    orders1 = Order.objects.filter(user=request.user).order_by('-created')
-    orders2 = Order.objects.all().order_by('-created')
-    
-    print(f"DEBUG: Orders found (user filter): {orders1.count()}")  # ADD THIS
-    print(f"DEBUG: All orders: {orders2.count()}")
-    
-    context = {
-        'orders1': orders1,
-        'orders2': orders2
-    }
-    return render(request, 'orders/order_list.html', context)
+    orders = Order.objects.filter(user=request.user).order_by('-created')
+    return render(request, 'orders/order_list.html', {'orders': orders})
 
 @login_required
 def order_detail(request, order_number):
@@ -373,10 +366,12 @@ def payment_canceled(request):
     )
 
 @login_required
+@artist_required
 def artist_orders_dashboard(request):
     orders = (
         Order.objects
         .filter(items__artwork__artist=request.user)
+        .prefetch_related(Prefetch('items', queryset=OrderItem.objects.filter(artwork__artist=request.user).select_related('artwork'), to_attr='artist_items'))
         .distinct()
         .order_by('-created')
     )
@@ -384,7 +379,7 @@ def artist_orders_dashboard(request):
     total_orders = orders.count()
 
     status_counts = orders.values('status').annotate(
-        count=Count('id')
+        count=Count('id', distinct=True)
     )
 
     revenue_expr = ExpressionWrapper(
@@ -433,6 +428,9 @@ def artist_orders_dashboard(request):
         .order_by('-total_sold')[:5]
     )
 
+    for order in orders:
+        order.artist_subtotal = sum(item.get_cost() for item in order.artist_items)
+
     context = {
         'orders': orders,
         'total_orders': total_orders,
@@ -445,48 +443,44 @@ def artist_orders_dashboard(request):
     return render(request, 'orders/artist_orders_dashboard.html', context)
 
 @login_required
+@artist_required
 @transaction.atomic
 def artist_order_detail(request, order_number):
     order = get_object_or_404(Order.objects.select_for_update(), order_number=order_number)
-    artist_items = order.items.filter(artwork__artist=request.user)
+    artist_items = order.items.filter(artwork__artist=request.user).select_related('artwork')
     if not artist_items.exists():
         messages.error(request, "You don't have permission to view this order.")
         return redirect('artist_orders_dashboard')
+    fulfillment = artist_items.first()
+    initial = {
+        'status': fulfillment.artist_fulfillment_status,
+        'tracking_number': fulfillment.tracking_number,
+        'shipping_carrier': fulfillment.shipping_carrier,
+        'artist_notes': fulfillment.artist_notes,
+    }
+    form = OrderStatusForm(request.POST if request.method == 'POST' else None, initial=initial)
     if request.method == 'POST':
         try:
             require_fulfillable(order)
+            if form.is_valid():
+                update_artist_fulfillment(order, request.user, form.cleaned_data)
+                messages.success(request, 'Your fulfillment status has been updated.')
+                return redirect('artist_order_detail', order_number=order.order_number)
+            messages.error(request, 'Please correct the fulfillment details below.')
         except PurchaseError as exc:
             messages.error(request, str(exc))
             return redirect('artist_order_detail', order_number=order.order_number)
-        new_status = request.POST.get('status')
-        valid_statuses = dict(OrderItem._meta.get_field('artist_fulfillment_status').choices)
-        if new_status not in valid_statuses:
-            messages.error(request, 'Please choose a valid fulfillment status.')
-        else:
-            if not order.preparation_started_at and (new_status in ('preparing', 'shipped', 'delivered') or artist_items.exclude(artist_fulfillment_status__in=['', 'pending']).exists()):
-                order.preparation_started_at = timezone.now()
-            artist_items.update(artist_fulfillment_status=new_status)
-            tracking_number = request.POST.get('tracking_number', '').strip()
-            if tracking_number:
-                order.tracking_number = tracking_number
-                order.shipping_carrier = request.POST.get('shipping_carrier', '')
-            if new_status == 'shipped' and not order.shipped_at:
-                order.shipped_at = timezone.now()
-            elif new_status == 'delivered' and not order.delivered_at:
-                order.delivered_at = timezone.now()
-            artist_notes = request.POST.get('artist_notes', '')
-            if artist_notes:
-                order.artist_notes = artist_notes
-            order.save()
-            messages.success(request, f'Order status updated to {new_status}.')
-        return redirect('artist_order_detail', order_number=order.order_number)
-    return render(request, 'orders/artist_order_detail.html', {'order': order, 'artist_items': artist_items})
+    return render(request, 'orders/artist_order_detail.html', {
+        'order': order, 'artist_items': artist_items,
+        'fulfillment': fulfillment, 'status_form': form,
+    })
 
 @login_required
+@artist_required
 @transaction.atomic
 def mark_order_shipped(request, order_number):
     order = get_object_or_404(Order.objects.select_for_update(), order_number=order_number)
-    artist_items = order.items.filter(artwork__artist=request.user)
+    artist_items = order.items.filter(artwork__artist=request.user).select_related('artwork')
     if not artist_items.exists():
         messages.error(request, "You don't have permission to update this order.")
         return redirect('artist_orders_dashboard')
@@ -495,19 +489,21 @@ def mark_order_shipped(request, order_number):
     except PurchaseError as exc:
         messages.error(request, str(exc))
         return redirect('artist_order_detail', order_number=order.order_number)
-    form = OrderShippingForm(request.POST or None, instance=order)
+    fulfillment = artist_items.first()
+    form = OrderShippingForm(
+        request.POST if request.method == 'POST' else None,
+        initial={'tracking_number': fulfillment.tracking_number, 'shipping_carrier': fulfillment.shipping_carrier},
+    )
     if request.method == 'POST' and form.is_valid():
-        order = form.save(commit=False)
-        order.shipped_at = timezone.now()
-        order.preparation_started_at = order.preparation_started_at or order.shipped_at
-        order.status = 'shipped'
-        order.save()
-        artist_items.update(artist_fulfillment_status='shipped')
-        messages.success(request, f'Order #{order.order_number} marked as shipped!')
+        update_artist_fulfillment(order, request.user, dict(form.cleaned_data, status='shipped'))
+        messages.success(request, f'Your artwork in order #{order.order_number} has been marked as shipped!')
         return redirect('artist_order_detail', order_number=order.order_number)
-    return render(request, 'orders/mark_shipped.html', {'order': order, 'form': form})
+    return render(request, 'orders/mark_shipped.html', {
+        'order': order, 'form': form, 'artist_items': artist_items,
+    })
 
 @login_required
+@artist_required
 def artist_sales_analytics(request):
     """
     Detailed sales analytics for artists
