@@ -1,0 +1,61 @@
+{% load static %}
+{% with current=request.resolver_match.url_name %}
+<header class="site-header">
+    <div class="site-header__inner">
+        <a class="site-brand" href="{% url 'home' %}" aria-label="Artsy home">
+            <img class="site-brand__logo" src="{% static 'img/artsyLogo.png' %}" alt="" width="42" height="42">
+            <span>Artsy</span>
+        </a>
+
+        <nav class="site-primary" id="site-navigation" aria-label="Main navigation">
+            <a href="{% url 'home' %}"{% if current == 'home' %} aria-current="page"{% endif %}>Home</a>
+            <a href="{% url 'artwork_list' %}"{% if current == 'artwork_list' or current == 'artwork_detail' %} aria-current="page"{% endif %}>Gallery</a>
+            <a href="{% url 'artist_list' %}"{% if current == 'artist_list' or current == 'user_view_of_artist' or current == 'commission_request' %} aria-current="page"{% endif %}>Artists</a>
+        </nav>
+
+        <div class="site-utilities">
+            <a class="site-cart" href="{% url 'cart:cart_detail' %}" aria-label="Cart{% if cart_total_quantity %}, {{ cart_total_quantity }} items{% endif %}">
+                <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h2l2.1 12h11.8l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                <span class="site-cart__label">Cart</span>
+                {% if cart_total_quantity %}<span class="site-cart__count" aria-hidden="true">{{ cart_total_quantity }}</span>{% endif %}
+            </a>
+
+            <details class="site-account">
+                <summary class="site-account__trigger" aria-controls="site-account-panel">
+                    <span>{% if user.is_authenticated %}Account{% else %}Sign in{% endif %}</span>
+                    <svg class="site-account__chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+                </summary>
+                <div class="site-account__panel" id="site-account-panel">
+                    {% if user.is_authenticated %}
+                        <div class="site-account__identity"><span>Signed in as</span><strong>{{ user.username }}</strong></div>
+                        <div class="site-account__group" aria-label="Your account">
+                            <a href="{% url 'accounts:profile' %}">My account</a>
+                            <a href="{% url 'accounts:order_history' %}">Order history</a>
+                            <a href="{% url 'commission_list' %}">Commissions</a>
+                        </div>
+                        {% if is_artist %}
+                        <div class="site-account__group" aria-labelledby="site-artist-tools">
+                            <p class="site-account__heading" id="site-artist-tools">Artist tools</p>
+                            <a href="{% url 'artist_dashboard' %}">My dashboard</a>
+                            <a href="{% url 'artist_orders_dashboard' %}">Manage orders</a>
+                            <a href="{% url 'artwork_create' %}">Add artwork</a>
+                        </div>
+                        {% endif %}
+                        <div class="site-account__group site-account__group--last"><a href="{% url 'logout' %}">Log out</a></div>
+                    {% else %}
+                        <div class="site-account__identity"><strong>Welcome to Artsy</strong><span>Find something you love.</span></div>
+                        <div class="site-account__group">
+                            <a href="{% url 'login' %}">Sign in</a>
+                            <a href="{% url 'signup' %}">Create an account</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </details>
+
+            <button class="site-menu-toggle" type="button" aria-controls="site-navigation" aria-expanded="false" aria-label="Open navigation">
+                <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </div>
+    </div>
+</header>
+{% endwith %}

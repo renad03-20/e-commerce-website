@@ -22,73 +22,13 @@
     </head>
 
     {% block extra_css %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/site_header.css' %}">
 
     <title>{% block title %}Art Gallery{% endblock %}</title>
 </head>
 <body>
     {% block navigation %}
-        <!-- Default nav for other pages -->
-        <div class="intro1">
-            <div class="header-container">
-                <nav>
-                    <a href="{% url 'home' %}">
-                        <img src="{% static 'img/artsyLogo.png' %}" class="logo" alt="Art Gallery Logo">
-                    </a>
-                    <button type="button" class="mobile-menu-toggle" aria-controls="site-navigation" aria-expanded="false">Menu</button>
-                    <ul id="site-navigation">
-                        <li><a href="{% url 'home' %}">Home</a></li>
-                        <li><a href="{% url 'artwork_list' %}">Gallery</a></li>
-                        <li><a href="{% url 'artist_list' %}">Artists</a></li>
-                        <!-- <li><a href="#">Contact Us</a></li> -->
-                        
-                        {% if user.is_authenticated %}
-                            <!-- User is logged in -->
-                            <!-- <li>
-                                <a href="#">
-                                    <i class="fa-solid fa-user"></i> {{ user.username }}
-                                </a>
-                            </li> -->
-                            <li>
-                                <a href="{% url 'cart:cart_detail' %}">
-                                    <i class="fa-solid fa-cart-shopping"></i>
-                                    {% if cart_total_quantity and cart_total_quantity > 0 %}
-                                        <span class="cart-count">{{ cart_total_quantity }}</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{% url 'accounts:profile' %}">
-                                    <i class="fa-solid fa-user"></i> My Account
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{% url 'commission_list' %}">
-                                    <i class="fa-solid fa-pen-nib"></i> Commissions
-                                </a>
-                            </li>
-                            {% if is_artist %}
-                                <li><a href="{% url 'artwork_create' %}">Add Artwork</a></li>
-                                <li><a href="{% url 'artist_dashboard' %}">My Dashboard</a></li>
-                                <li><a href="{% url 'artist_orders_dashboard' %}">Manage Orders</a></li>
-                            {% endif %}
-                            <li><a href="{% url 'logout' %}">Logout</a></li>
-                        {% else %}
-                            <!-- User is not logged in -->
-                            <li><a href="{% url 'login' %}"><i class="fa-solid fa-user"></i> Login</a></li>
-                            <li><a href="{% url 'signup' %}">Sign Up</a></li>
-                            <li>
-                                <a href="{% url 'cart:cart_detail' %}">
-                                    <i class="fa-solid fa-cart-shopping"></i>
-                                    {% if cart_total_quantity and cart_total_quantity > 0 %}
-                                        <span class="cart-count">{{ cart_total_quantity }}</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            </div>
-        </div>
+        {% include 'includes/site_header.html' %}
     {% endblock %}
 
     <!-- Messages display -->
