@@ -1,71 +1,77 @@
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from django.conf import settings
-from django.contrib.sites.shortcuts import get_current_site
+"""Multipart purchase emails. Return False on failure without interrupting payment."""
+import logging
+from urllib.parse import urljoin, urlsplit, urlunsplit
+
 from decouple import config
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.core.validators import validate_email
+from django.template.loader import render_to_string
+from django.urls import reverse
+
+from .cancellation import closed
+
+logger = logging.getLogger(__name__)
 
 
-def send_order_confirmation(order):
-    """Send order confirmation email to customer"""
-    subject = f'Order Confirmation - #{order.id} - Art Gallery'
+def _site_url(site_url):
+    if not site_url:
+        site_url = config('SITE_DOMAIN', default='127.0.0.1:8001')
+        if '://' not in site_url:
+            site_url = ('http://' if settings.DEBUG else 'https://') + site_url
+    parts = urlsplit(site_url)
+    if parts.scheme not in ('http', 'https') or not parts.netloc or parts.username or parts.password:
+        raise ValueError('Configure a valid HTTP(S) site address for purchase emails.')
+    return urlunsplit((parts.scheme, parts.netloc, parts.path.rstrip('/') + '/', '', ''))
 
-    domain = config('SITE_DOMAIN', default='localhost:8000')
-    
-    # Create HTML email content
-    context = {
-        'order': order,
-        'site_url': f"http://{domain}"
-    }
-    
-    html_content = render_to_string('emails/order_confirmation.html', context)
-    text_content = strip_tags(html_content)  # Plain text version
-    
-    # Create email
-    email = EmailMultiAlternatives(
-        subject=subject,
-        body=text_content,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[order.email]
-    )
-    email.attach_alternative(html_content, "text/html")
-    
+
+def _send_message(subject, recipient, template, context, description):
     try:
-        email.send()
-        print(f"Order confirmation email sent to {order.email}")
-        return True
-    except Exception as e:
-        print(f"Failed to send email: {e}")
+        validate_email(recipient)
+        text = render_to_string(f'orders/emails/{template}.txt', context).strip()
+        html = render_to_string(f'orders/emails/{template}.html', context)
+        message = EmailMultiAlternatives(
+            subject=subject, body=text, from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[recipient],
+        )
+        message.attach_alternative(html, 'text/html')
+        if message.send(fail_silently=False) != 1:
+            logger.error('Email backend did not accept %s.', description)
+            return False
+    except Exception:
+        logger.exception('Could not send %s.', description)
         return False
+    logger.info('Sent %s.', description)
+    return True
 
-def send_artist_order_notification(order_item):
-    """Send notification to artist when their artwork is purchased"""
+
+def send_order_confirmation(order, site_url=None):
+    if not order.paid or closed(order):
+        return False
+    try:
+        order_url = urljoin(_site_url(site_url), reverse('order_detail', args=[order.order_number]))
+    except Exception:
+        logger.exception('Could not build the buyer email link for order %s.', order.pk)
+        return False
+    return _send_message(
+        f'Order confirmation - {order.order_number} - Artsy', order.email,
+        'order_confirmation', {'order': order, 'order_url': order_url},
+        f'buyer confirmation for order {order.order_number}',
+    )
+
+
+def send_artist_order_notification(order_item, site_url=None):
+    order = order_item.order
+    if not order.paid or closed(order):
+        return False
     artist = order_item.artwork.artist
-    subject = f'🎨 Your artwork was purchased! - {order_item.artwork_title}'
-
-    domain = config('SITE_DOMAIN', default='localhost:8000')
-    
-    context = {
-        'order_item': order_item,
-        'artist': artist,
-        'site_url': f"http://{domain}"
-    }
-    
-    html_content = render_to_string('emails/artist_notification.html', context)
-    text_content = strip_tags(html_content)
-    
-    email = EmailMultiAlternatives(
-        subject=subject,
-        body=text_content,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[artist.email]
-    )
-    email.attach_alternative(html_content, "text/html")
-    
     try:
-        email.send()
-        print(f"Artist notification sent to {artist.email}")
-        return True
-    except Exception as e:
-        print(f"Failed to send artist email: {e}")
+        order_url = urljoin(_site_url(site_url), reverse('artist_order_detail', args=[order.order_number]))
+    except Exception:
+        logger.exception('Could not build the artist email link for order item %s.', order_item.pk)
         return False
+    return _send_message(
+        f'Artwork purchased - {order.order_number} - Artsy', artist.email,
+        'artist_notification', {'order_item': order_item, 'order': order, 'artist': artist, 'order_url': order_url},
+        f'artist notification for order item {order_item.pk}',
+    )

@@ -1,0 +1,20 @@
+{% autoescape off %}ARTSY - YOUR ARTWORK WAS PURCHASED
+Order: {{ order.order_number }}
+
+Hello {{ artist.username }},
+Payment has been confirmed for this artwork:
+
+Artwork: {{ order_item.artwork_title }}
+Quantity: {{ order_item.quantity }}
+Unit price: USD {{ order_item.price|floatformat:2 }}
+Artwork amount: USD {{ order_item.get_cost|floatformat:2 }}
+
+SHIP TO
+{{ order.first_name }} {{ order.last_name }}
+{{ order.address }}
+{{ order.city }}, {{ order.postal_code }}
+{{ order.country }}
+
+Manage your artwork in this order (sign in to your artist account):
+{{ order_url }}
+{% endautoescape %}

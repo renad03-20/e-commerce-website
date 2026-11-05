@@ -318,12 +318,13 @@ def payment_completed(request):
     except Exception as e:
         print(f"DEBUG: Cart cleanup failed: {e}")
 
-    # Send Emails (If not already handled by webhook)
+    # Use this site's actual origin, including the local development port.
     try:
         from .emails import send_artist_order_notification, send_order_confirmation
-        send_order_confirmation(order)
-        for item in order.items.all(): 
-            send_artist_order_notification(item)
+        site_url = request.build_absolute_uri('/')
+        send_order_confirmation(order, site_url=site_url)
+        for item in order.items.select_related('artwork__artist').all():
+            send_artist_order_notification(item, site_url=site_url)
     except Exception as e:
         print(f'Email sending failed: {e}')
     

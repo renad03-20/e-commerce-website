@@ -1,56 +1,33 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; text-align: center; }
-        .order-details { background: #f8f9fa; padding: 20px; margin: 20px 0; }
-        .artwork-item { display: flex; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #ddd; }
-        .artwork-image { width: 80px; height: 80px; object-fit: cover; margin-right: 15px; }
-        .footer { text-align: center; margin-top: 30px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎨 Order Confirmed!</h1>
-            <p>Thank you for your purchase from Art Gallery</p>
-        </div>
-        
-        <div class="order-info">
-            <h2>Order #{{ order.order_number}}</h2>
-            <p><strong>Order Date:</strong> {{ order.created|date:"F j, Y" }}</p>
-            <p><strong>Total Amount:</strong> ${{ order.get_total_cost }}</p>
-        </div>
-        
-        <div class="order-details">
-            <h3>Order Items</h3>
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your order is confirmed</title></head>
+<body style="margin:0;padding:24px 12px;background:#f3f5f7;font-family:Arial,sans-serif;color:#2c3e50;line-height:1.6;">
+    <table role="presentation" style="width:100%;max-width:600px;margin:0 auto;border-collapse:collapse;background:#fff;">
+        <tr><td style="padding:24px;background:#2c3e50;color:#fff;"><strong style="font-size:22px;">Artsy</strong><h1 style="font-size:24px;margin:12px 0 0;">Your order is confirmed</h1></td></tr>
+        <tr><td style="padding:24px;">
+            <p>Thank you for your purchase, {{ order.first_name }}.</p>
+            <p><strong>Order {{ order.order_number }}</strong><br>{{ order.created|date:"F j, Y" }}</p>
+            <h2 style="font-size:18px;">Your artworks</h2>
             {% for item in order.items.all %}
-            <div class="artwork-item">
-                <img src="{{ site_url }}{{ item.artwork.image.url }}" alt="{{ item.artwork_title }}" class="artwork-image">
-                <div>
-                    <h4>{{ item.artwork_title }}</h4>
-                    <p>By {{ item.artist_name }}</p>
-                    <p>Quantity: {{ item.quantity }} × ${{ item.price }}</p>
-                    <p><strong>Item Total: ${{ item.get_cost }}</strong></p>
-                </div>
+            <div style="padding:14px 0;border-bottom:1px solid #e6ebf0;">
+                <strong>{{ item.artwork_title }}</strong><br>
+                <span style="color:#617184;">By {{ item.artist_name }}</span><br>
+                Quantity: {{ item.quantity }} · Unit price: USD {{ item.price|floatformat:2 }}<br>
+                <strong>Item total: USD {{ item.get_cost|floatformat:2 }}</strong>
             </div>
             {% endfor %}
-        </div>
-        
-        <div class="shipping-info">
-            <h3>Shipping Address</h3>
-            <p>{{ order.first_name }} {{ order.last_name }}</p>
-            <p>{{ order.address }}</p>
-            <p>{{ order.city }}, {{ order.postal_code }}</p>
-            <p>{{ order.country }}</p>
-        </div>
-        
-        <div class="footer">
-            <p>If you have any questions, please contact us at XXXXXX</p>
-            <p>© 2025 Art Gallery. All rights reserved.</p>
-        </div>
-    </div>
+            <table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0;">
+                <tr><td style="padding:4px 0;">Subtotal</td><td style="text-align:right;">USD {{ order.get_total_cost|floatformat:2 }}</td></tr>
+                <tr><td style="padding:4px 0;">Tax (8%)</td><td style="text-align:right;">USD {{ order.get_tax|floatformat:2 }}</td></tr>
+                <tr><td style="padding:4px 0;">Shipping</td><td style="text-align:right;">USD {{ order.get_shipping|floatformat:2 }}</td></tr>
+                <tr><td style="padding:12px 0;border-top:1px solid #e6ebf0;"><strong>Total paid</strong></td><td style="text-align:right;border-top:1px solid #e6ebf0;"><strong>USD {{ order.get_grand_total|floatformat:2 }}</strong></td></tr>
+            </table>
+            <h2 style="font-size:18px;">Ship to</h2>
+            <p>{{ order.first_name }} {{ order.last_name }}<br>{{ order.address }}<br>{{ order.city }}, {{ order.postal_code }}<br>{{ order.country }}</p>
+            <p><a href="{{ order_url }}" style="display:inline-block;padding:12px 18px;background:#2c3e50;color:#fff;text-decoration:none;border-radius:6px;">View your order</a></p>
+            <p style="font-size:13px;color:#617184;">Sign in to the buyer account used for this purchase to view the order.</p>
+        </td></tr>
+        <tr><td style="padding:16px 24px;border-top:1px solid #e6ebf0;font-size:12px;color:#617184;">Artsy · Order {{ order.order_number }}</td></tr>
+    </table>
 </body>
 </html>

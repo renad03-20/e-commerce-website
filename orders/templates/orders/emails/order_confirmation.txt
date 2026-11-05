@@ -1,0 +1,28 @@
+{% autoescape off %}ARTSY - ORDER CONFIRMED
+Order: {{ order.order_number }}
+Placed: {{ order.created|date:"F j, Y" }}
+
+Thank you for your purchase, {{ order.first_name }}.
+
+YOUR ARTWORKS
+{% for item in order.items.all %}
+{{ item.artwork_title }}
+Artist: {{ item.artist_name }}
+Quantity: {{ item.quantity }}
+Unit price: USD {{ item.price|floatformat:2 }}
+Item total: USD {{ item.get_cost|floatformat:2 }}
+{% endfor %}
+Subtotal: USD {{ order.get_total_cost|floatformat:2 }}
+Tax (8%): USD {{ order.get_tax|floatformat:2 }}
+Shipping: USD {{ order.get_shipping|floatformat:2 }}
+TOTAL PAID: USD {{ order.get_grand_total|floatformat:2 }}
+
+SHIP TO
+{{ order.first_name }} {{ order.last_name }}
+{{ order.address }}
+{{ order.city }}, {{ order.postal_code }}
+{{ order.country }}
+
+View your order (sign in to your buyer account):
+{{ order_url }}
+{% endautoescape %}
