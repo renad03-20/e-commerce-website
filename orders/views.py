@@ -39,6 +39,9 @@ def stripe_webhook(request):
         return HttpResponse(status=400)
 
     try:
+        # Newer Stripe SDK resources no longer expose dict methods such as get().
+        if hasattr(event, 'to_dict'):
+            event = event.to_dict()
         if event['type'] in ('refund.updated', 'refund.failed', 'refund.created'):
             update_refund(event['data']['object'])
         elif event['type'] in ('checkout.session.completed', 'checkout.session.async_payment_succeeded'):
@@ -318,16 +321,6 @@ def payment_completed(request):
     except Exception as e:
         print(f"DEBUG: Cart cleanup failed: {e}")
 
-    # Use this site's actual origin, including the local development port.
-    try:
-        from .emails import send_artist_order_notification, send_order_confirmation
-        site_url = request.build_absolute_uri('/')
-        send_order_confirmation(order, site_url=site_url)
-        for item in order.items.select_related('artwork__artist').all():
-            send_artist_order_notification(item, site_url=site_url)
-    except Exception as e:
-        print(f'Email sending failed: {e}')
-    
     # Session Cleanup 
     del request.session['order_id']
     

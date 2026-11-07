@@ -245,6 +245,9 @@ def confirm_payment(model, pk, session):
             purchase.paid = True
             purchase.status = 'processing'
         purchase.save()
+        if not is_commission(purchase):
+            from .purchase_notifications import queue_purchase_emails
+            queue_purchase_emails(purchase)
 
 
 def update_refund(refund):

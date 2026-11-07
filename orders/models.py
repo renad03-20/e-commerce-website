@@ -140,3 +140,27 @@ class OrderItem(models.Model):
         if not self.artist_name:
             self.artist_name = self.artwork.artist.username
         super().save(*args, **kwargs)
+
+
+class PurchaseEmailJob(models.Model):
+    """A purchase notification saved with the verified payment."""
+
+    class State(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        SENDING = 'sending', 'Sending'
+        SENT = 'sent', 'Sent'
+        FAILED = 'failed', 'Failed'
+        SKIPPED = 'skipped', 'Skipped'
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    item = models.ForeignKey(OrderItem, null=True, blank=True, on_delete=models.CASCADE)
+    artist_id_at_payment = models.PositiveBigIntegerField(null=True, blank=True)
+    key = models.CharField(max_length=64, unique=True, editable=False)
+    state = models.CharField(max_length=10, choices=State.choices, default=State.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    available_at = models.DateTimeField()
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['state', 'available_at'], name='purchase_email_due_idx')]

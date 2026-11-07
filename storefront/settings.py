@@ -163,6 +163,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 PRIVATE_MEDIA_ROOT = config('PRIVATE_MEDIA_ROOT', default=str(BASE_DIR / 'private_media'))  # Path where media is stored
 
 # Email settings
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Prints to console
     EMAIL_HOST = 'localhost'

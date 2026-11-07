@@ -77,8 +77,9 @@ class PurchaseEmailTests(TestCase):
         self.assertNotIn('PRIVATE PACKING NOTE', message.body + self.html(message))
         self.assertNotIn(self.other.email, str(message.to))
 
-    def test_request_origin_is_used_for_buyer_and_artist_links(self):
-        self.client.get(self.url, HTTP_HOST='127.0.0.1:8001')
+    def test_explicit_origin_is_used_for_buyer_and_artist_links(self):
+        send_order_confirmation(self.order, site_url=self.origin)
+        send_artist_order_notification(self.item, site_url=self.origin)
         buyer_url = self.origin.rstrip('/') + reverse('order_detail', args=[self.order.order_number])
         artist_url = self.origin.rstrip('/') + reverse('artist_order_detail', args=[self.order.order_number])
         self.assertIn(buyer_url, mail.outbox[0].body)
@@ -142,30 +143,17 @@ class PurchaseEmailTests(TestCase):
         self.assertNotIn('<script>alert', html)
         self.assertIn('<b>My portrait</b>', mail.outbox[0].body)
 
-    def test_payment_return_sends_one_of_each_and_refresh_does_not_repeat(self):
+    def test_payment_return_and_refresh_do_not_send_emails(self):
         response = self.client.get(self.url)
         self.assertRedirects(response, reverse('order_created', args=[self.order.order_number]))
-        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(len(mail.outbox), 0)
         for unused in range(2):
             self.client.get(response.url)
         self.client.get(self.url)
-        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(len(mail.outbox), 0)
         self.assertNotIn('order_id', self.client.session)
         self.art.refresh_from_db();self.assertEqual(self.art.stock, 3)
         self.order.refresh_from_db();self.assertTrue(self.order.paid)
-
-    def test_failed_buyer_email_does_not_block_the_artist_notification(self):
-        original_send = __import__('django.core.mail', fromlist=['EmailMultiAlternatives']).EmailMultiAlternatives.send
-        def send(message, *args, **kwargs):
-            if message.to == [self.buyer.email]:
-                raise OSError('buyer mail transport test failure')
-            return original_send(message, *args, **kwargs)
-        with patch('orders.emails.EmailMultiAlternatives.send', autospec=True, side_effect=send):
-            with self.assertLogs('orders.emails', level='ERROR'):
-                response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, [self.artist.email])
 
     def test_wrong_buyer_cannot_trigger_another_orders_purchase_emails(self):
         self.client.force_login(self.other)
