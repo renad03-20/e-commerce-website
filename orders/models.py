@@ -2,8 +2,7 @@ from django.db import models
 from django.conf import settings
 from artwork.models import Artwork
 import uuid
-from decimal import Decimal
-
+from decimal import Decimal, ROUND_HALF_UP
 class Order(models.Model):
     #! user information for logged in users 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -27,6 +26,13 @@ class Order(models.Model):
 
     updated = models.DateTimeField(auto_now=True)
     paid = models.BooleanField(default=False)
+
+    stripe_checkout_session_id = models.CharField(max_length=255, blank=True)
+    preparation_started_at = models.DateTimeField(null=True, blank=True)
+    cancellation_requested_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_refunds = models.JSONField(default=dict, blank=True)
+    inventory_unavailable_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     #! payment information 
     stripe_payment_intent_id = models.CharField(max_length=100, blank=True)
@@ -52,6 +58,15 @@ class Order(models.Model):
     #! add notes field for internal communication
     artist_notes = models.TextField(blank=True)
     
+    @property
+    def can_buyer_cancel(self):
+        from .cancellation import can_buyer_cancel
+        return can_buyer_cancel(self)
+
+    @property
+    def refund_summary(self):
+        return ', '.join(sorted({r['status'] for r in self.cancellation_refunds.values()}))
+
     class Meta:
         ordering = ['-created']
 
@@ -77,7 +92,9 @@ class Order(models.Model):
         return sum(item.quantity for item in self.items.all())
     
     def get_tax(self):
-        return self.get_total_cost() * Decimal('0.08')
+        return (
+            self.get_total_cost() * Decimal('0.08')
+        ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def get_shipping(self):
         return Decimal('10.00')
@@ -87,16 +104,23 @@ class Order(models.Model):
     
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    artwork = models.ForeignKey(Artwork, on_delete=models.CASCADE)
+    artwork = models.ForeignKey(Artwork, on_delete=models.PROTECT)
+    cart_item_id_at_checkout = models.PositiveBigIntegerField(null=True, blank=True, editable=False)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField(default=1)
 
     artwork_title = models.CharField(max_length=255, blank=True)
     artist_name = models.CharField(max_length=255, blank=True)
+    tracking_number = models.CharField(max_length=100, blank=True)
+    shipping_carrier = models.CharField(max_length=100, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    artist_notes = models.TextField(blank=True)
 
     #! artist specific tracking 
     artist_fulfillment_status = models.CharField(
         max_length=20,
+        default='pending',
         choices=[
             ('pending', 'pending'),
             ('preparing', 'preparing'),
@@ -118,3 +142,27 @@ class OrderItem(models.Model):
         if not self.artist_name:
             self.artist_name = self.artwork.artist.username
         super().save(*args, **kwargs)
+
+
+class PurchaseEmailJob(models.Model):
+    """A purchase notification saved with the verified payment."""
+
+    class State(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        SENDING = 'sending', 'Sending'
+        SENT = 'sent', 'Sent'
+        FAILED = 'failed', 'Failed'
+        SKIPPED = 'skipped', 'Skipped'
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    item = models.ForeignKey(OrderItem, null=True, blank=True, on_delete=models.CASCADE)
+    artist_id_at_payment = models.PositiveBigIntegerField(null=True, blank=True)
+    key = models.CharField(max_length=64, unique=True, editable=False)
+    state = models.CharField(max_length=10, choices=State.choices, default=State.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    available_at = models.DateTimeField()
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['state', 'available_at'], name='purchase_email_due_idx')]

@@ -1,5 +1,14 @@
 from django.contrib import admin
-from .models import Artwork, Category, Tag
+from .models import (
+    Artwork,
+    Category,
+    Tag,
+    CustomRequest,
+    CommissionMessage,
+    CommissionDelivery,
+    CommissionRevisionRequest,
+    CommissionStatusHistory,
+)
 
 @admin.register(Artwork)
 class ArtworkAdmin(admin.ModelAdmin):
@@ -9,3 +18,8 @@ class ArtworkAdmin(admin.ModelAdmin):
 
 admin.site.register(Category)
 admin.site.register(Tag)    
+admin.site.register(CustomRequest)
+admin.site.register(CommissionMessage)
+admin.site.register(CommissionDelivery)
+admin.site.register(CommissionRevisionRequest)
+admin.site.register(CommissionStatusHistory)

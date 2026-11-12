@@ -13,7 +13,6 @@ __pycache__/
 db.sqlite3
 media/
 staticfiles/
-*/migrations/
 *.bak
 
 # Environments
@@ -27,3 +26,6 @@ env/
 .idea/
 *.swp
 .DS_Store
+
+# Private commission uploads
+/private_media/

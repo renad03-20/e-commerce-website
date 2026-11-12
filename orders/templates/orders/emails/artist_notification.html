@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your artwork was purchased</title></head>
+<body style="margin:0;padding:24px 12px;background:#f3f5f7;font-family:Arial,sans-serif;color:#2c3e50;line-height:1.6;">
+    <table role="presentation" style="width:100%;max-width:600px;margin:0 auto;border-collapse:collapse;background:#fff;">
+        <tr><td style="padding:24px;background:#2c3e50;color:#fff;"><strong style="font-size:22px;">Artsy</strong><h1 style="font-size:24px;margin:12px 0 0;">Your artwork was purchased</h1></td></tr>
+        <tr><td style="padding:24px;">
+            <p>Hello {{ artist.username }},</p>
+            <p>Payment has been confirmed for your artwork in order <strong>{{ order.order_number }}</strong>.</p>
+            <h2 style="font-size:20px;">{{ order_item.artwork_title }}</h2>
+            <p>Quantity: {{ order_item.quantity }}<br>Unit price: USD {{ order_item.price|floatformat:2 }}<br><strong>Artwork amount: USD {{ order_item.get_cost|floatformat:2 }}</strong></p>
+            <h2 style="font-size:18px;">Ship to</h2>
+            <p>{{ order.first_name }} {{ order.last_name }}<br>{{ order.address }}<br>{{ order.city }}, {{ order.postal_code }}<br>{{ order.country }}</p>
+            <p><a href="{{ order_url }}" style="display:inline-block;padding:12px 18px;background:#2c3e50;color:#fff;text-decoration:none;border-radius:6px;">Manage your artwork</a></p>
+            <p style="font-size:13px;color:#617184;">Sign in to your artist account to manage fulfillment.</p>
+        </td></tr>
+        <tr><td style="padding:16px 24px;border-top:1px solid #e6ebf0;font-size:12px;color:#617184;">Artsy · Order {{ order.order_number }}</td></tr>
+    </table>
+</body>
+</html>

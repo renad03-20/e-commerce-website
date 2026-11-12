@@ -4,7 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
+django = ">=6.0,<6.1"
+python-decouple = "*"
+django-imagekit = "*"
+django-countries = "*"
+pillow = "*"
+stripe = ">=14.3,<18"
+gunicorn = "*"
+whitenoise = "*"
+dj-database-url = "*"
+psycopg = {extras = ["binary"], version = "*"}
 
 [dev-packages]
 

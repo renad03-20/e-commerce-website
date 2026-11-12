@@ -21,46 +21,29 @@ class OrderCreateForm(forms.ModelForm):
         for field in self.fields:
             self.fields[field].required = True
 
-class OrderShippingForm(forms.ModelForm):
-    class Meta:
-        model = Order
-        fields = ['tracking_number', 'shipping_carrier']
-        widgets = {
-            'tracking_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter tracking number'
-            }),
-            'shipping_carrier': forms.Select(attrs={'class': 'form-control'}, choices=[
-                ('', 'Select carrier'),
-                ('usps', 'USPS'),
-                ('ups', 'UPS'),
-                ('fedex', 'FedEx'),
-                ('dhl', 'DHL'),
-                ('other', 'Other'),
-            ]),
-        }
+CARRIER_CHOICES = [
+    ('', 'Select carrier'), ('usps', 'USPS'), ('ups', 'UPS'),
+    ('fedex', 'FedEx'), ('dhl', 'DHL'), ('other', 'Other'),
+]
 
-class OrderStatusForm(forms.Form):
-    status = forms.ChoiceField(
-        choices=OrderItem._meta.get_field('artist_fulfillment_status').choices,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+
+class OrderShippingForm(forms.Form):
     tracking_number = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Tracking number (optional)'
-        })
+        required=False, max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter tracking number'}),
     )
     shipping_carrier = forms.ChoiceField(
+        required=False, choices=CARRIER_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+
+
+class OrderStatusForm(OrderShippingForm):
+    status = forms.ChoiceField(
+        choices=OrderItem._meta.get_field('artist_fulfillment_status').choices,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    artist_notes = forms.CharField(
         required=False,
-        choices=[
-            ('', 'Select carrier'),
-            ('usps', 'USPS'),
-            ('ups', 'UPS'),
-            ('fedex', 'FedEx'),
-            ('dhl', 'DHL'),
-            ('other', 'Other'),
-        ],
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
     )

@@ -2,6 +2,7 @@
 {% load static %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/artwork_detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/artist_commissions.css' %}">
 {% endblock %}  
 
 {% block content %}
@@ -13,7 +14,13 @@
         
         <div class="artwork-info">
             <h1>{{ artwork.title }}</h1>
-            <p class="artist">By {{ artwork.artist.username }}</p>
+            <p class="artist">By <a href="{% url 'user_view_of_artist' artwork.artist_id %}">{{ artwork.artist.username }}</a></p>
+            <div class="artist-profile-actions">
+                <a href="{% url 'user_view_of_artist' artwork.artist_id %}" class="btn btn-secondary">View Artist Portfolio</a>
+                {% if artist_accepting_commissions and user != artwork.artist %}
+                <a href="{% url 'commission_request' artwork.artist_id %}" class="btn btn-primary">Request a Commission</a>
+                {% endif %}
+            </div>
             <p class="price">${{ artwork.price }}</p>
             
             <div class="description">
@@ -52,10 +59,6 @@
                             <i class="fa-solid fa-cart-plus"></i> Add to Cart
                         </button>
                     </form>
-                    <a href="{% url 'user_view_of_artist' artwork.artist.id %}"
-                        class="btn btn-primary">
-                        Check artist account
-                    </a>
                 </div>
             {% else %}
                 <div class="out-of-stock">

@@ -43,7 +43,7 @@
                         Address Book
                     </a>
                     
-                    {% if user.groups.filter.name == 'Artists' or user.is_superuser %}
+                    {% if is_artist %}
                     <div class="nav-divider">Artist Tools</div>
                     <a href="{% url 'artist_dashboard' %}" class="nav-item">
                         <i class="fa-solid fa-palette"></i>

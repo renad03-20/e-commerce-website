@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Find an Artist - Art Gallery{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/artist_commissions.css' %}">{% endblock %}
+{% block content %}
+<div class="artist-discovery">
+    <div class="discovery-heading">
+        <p class="eyebrow">Made for you</p>
+        <h1>Find your artist</h1>
+        <p>Explore their work, find a style you love, and request a custom piece.</p>
+    </div>
+    <form method="get" class="artist-search" role="search">
+        <div>
+            <label for="artist-query">Artist username</label>
+            <input id="artist-query" name="q" value="{{ query }}" placeholder="Search artists" maxlength="100">
+        </div>
+        <label class="availability-filter"><input type="checkbox" name="open" value="1" {% if open_only %}checked{% endif %}> Open for commissions</label>
+        <button type="submit" class="flow-button">Search</button>
+        {% if query or open_only %}<a href="{% url 'artist_list' %}" class="flow-link">Clear filters</a>{% endif %}
+    </form>
+    <div class="artist-directory-grid">
+        {% for artist in page_obj %}
+        <article class="directory-card">
+            <a class="artist-identity" href="{% url 'user_view_of_artist' artist.pk %}">
+                {% if artist.userprofile.avatar %}<img class="artist-avatar" src="{{ artist.userprofile.avatar.url }}" alt="" loading="lazy">
+                {% else %}<span class="artist-avatar avatar-initial" aria-hidden="true">{{ artist.username|first|upper }}</span>{% endif %}
+                <div><h2>{{ artist.username }}</h2><p>{{ artist.artwork_count }} artwork{{ artist.artwork_count|pluralize }}</p></div>
+            </a>
+            {% if artist.userprofile.is_available_for_commissions %}<span class="commission-availability availability-open">Open for commissions</span>
+            {% else %}<span class="commission-availability">Commissions currently closed</span>{% endif %}
+            <p class="artist-bio">{{ artist.userprofile.bio|default:'Explore this artist’s portfolio.'|truncatewords:25 }}</p>
+            <div class="portfolio-preview">
+                {% for artwork in artist.portfolio_preview %}<a href="{% url 'artwork_detail' artwork.pk %}"><img src="{{ artwork.image.url }}" alt="{{ artwork.title }}" loading="lazy"></a>
+                {% empty %}<p>No artworks added yet.</p>{% endfor %}
+            </div>
+            <a class="flow-button flow-button-secondary" href="{% url 'user_view_of_artist' artist.pk %}">View Portfolio</a>
+        </article>
+        {% empty %}
+        <div class="flow-empty"><h2>No artists found</h2><p>Try another username or clear the availability filter.</p><a href="{% url 'artist_list' %}">Browse all artists</a></div>
+        {% endfor %}
+    </div>
+    {% if page_obj.has_other_pages %}
+    <nav class="artist-pagination" aria-label="Artists pages">
+        {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&amp;q={{ query|urlencode }}{% if open_only %}&amp;open=1{% endif %}">Previous</a>{% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&amp;q={{ query|urlencode }}{% if open_only %}&amp;open=1{% endif %}">Next</a>{% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

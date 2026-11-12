@@ -64,6 +64,7 @@
     {% if artist_profile.is_available_for_commissions %}
         <section class="commission-section mt-5 p-4 bg-light rounded">
             <h3>Request a Custom Piece from {{ artist.username }}</h3>
+            <p class="text-muted">Includes up to 2 free revisions. Payment is collected after the artist accepts your request.</p>
             <form method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ form.as_p }}

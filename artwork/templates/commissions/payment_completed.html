@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Payment Complete - Art Gallery{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/commissions.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="commission-payment">
+    <div class="container">
+        <div class="payment-card">
+            <h1>Payment Complete</h1>
+            <p>Your commission payment was successful. The artist can now begin work.</p>
+            <a class="btn btn-dark" href="{% url 'commission_detail' commission.id %}">Back to Commission</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,20 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User, Group
+from .models import SupportMessage
+
+
+class ContactForm(forms.ModelForm):
+    class Meta:
+        model = SupportMessage
+        fields = ['name', 'email', 'subject', 'order_number', 'message']
+        widgets = {'message': forms.Textarea(attrs={'rows': 6})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(required=True)

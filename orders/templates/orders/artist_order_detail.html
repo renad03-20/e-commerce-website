@@ -26,17 +26,18 @@
         <!-- Order Status & Actions -->
         <div class="order-status-section">
             <div class="status-card">
-                <h3>Order Status</h3>
+                <h3>Your Fulfillment Status</h3>
                 <div class="status-display">
-                    <span class="status-badge status-{{ order.status }}">
-                        {{ order.get_status_display }}
+                    <span class="status-badge status-{{ fulfillment.artist_fulfillment_status }}">
+                        {{ fulfillment.get_artist_fulfillment_status_display|capfirst }}
                     </span>
-                    {% if order.shipped_at %}
-                    <p class="status-date">Shipped on {{ order.shipped_at|date:"M d, Y" }}</p>
+                    {% if fulfillment.shipped_at %}
+                    <p class="status-date">Shipped on {{ fulfillment.shipped_at|date:"M d, Y" }}</p>
                     {% endif %}
-                    {% if order.delivered_at %}
-                    <p class="status-date">Delivered on {{ order.delivered_at|date:"M d, Y" }}</p>
+                    {% if fulfillment.delivered_at %}
+                    <p class="status-date">Delivered on {{ fulfillment.delivered_at|date:"M d, Y" }}</p>
                     {% endif %}
+                    <p>Overall order: {{ order.get_status_display }}</p>
                 </div>
             </div>
 
@@ -44,14 +45,14 @@
             <div class="actions-card">
                 <h3>Quick Actions</h3>
                 <div class="action-buttons">
-                    {% if order.status != 'shipped' and order.status != 'delivered' %}
+                    {% if order.paid and not order.cancellation_requested_at and order.status != 'cancelled' and fulfillment.artist_fulfillment_status != 'shipped' and fulfillment.artist_fulfillment_status != 'delivered' %}
                     <a href="{% url 'mark_order_shipped' order.order_number %}" class="btn btn-primary">
                         📦 Mark as Shipped
                     </a>
                     {% endif %}
                     
-                    {% if order.tracking_number %}
-                    <a href="#" class="btn btn-outline" onclick="copyTrackingNumber()">
+                    {% if fulfillment.tracking_number %}
+                    <a href="#" class="btn btn-outline" onclick="copyTrackingNumber(this); return false;">
                         📋 Copy Tracking
                     </a>
                     {% endif %}
@@ -100,19 +101,19 @@
             </div>
 
             <!-- Shipping & Tracking -->
-            {% if order.tracking_number %}
+            {% if fulfillment.tracking_number %}
             <div class="tracking-card">
                 <h3>Shipping Information</h3>
                 <div class="tracking-info">
                     <p><strong>Tracking Number:</strong> 
-                        <span id="tracking-number">{{ order.tracking_number }}</span>
-                        <button class="copy-btn" onclick="copyTrackingNumber()" title="Copy tracking number">
+                        <span id="tracking-number">{{ fulfillment.tracking_number }}</span>
+                        <button class="copy-btn" onclick="copyTrackingNumber(this); return false;" title="Copy tracking number">
                             📋
                         </button>
                     </p>
-                    <p><strong>Carrier:</strong> {{ order.shipping_carrier|upper }}</p>
-                    {% if order.shipped_at %}
-                    <p><strong>Shipped:</strong> {{ order.shipped_at|date:"M d, Y" }}</p>
+                    <p><strong>Carrier:</strong> {{ fulfillment.shipping_carrier|upper }}</p>
+                    {% if fulfillment.shipped_at %}
+                    <p><strong>Shipped:</strong> {{ fulfillment.shipped_at|date:"M d, Y" }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -123,65 +124,46 @@
         <div class="status-update-section">
             <div class="update-card">
                 <h3>Update Order Status</h3>
-                <form method="post" class="status-form">
+                {% if order.paid and not order.cancellation_requested_at and order.status != 'cancelled' %}
+                    <form method="post" class="status-form">
                     {% csrf_token %}
-                    
+                    {% if status_form.errors %}
+                    <div class="error" role="alert">Please correct the details below.{{ status_form.non_field_errors }}</div>
+                    {% endif %}
                     <div class="form-group">
-                        <label for="status">Update Your Fulfillment Status</label>
-                        <select name="status" id="status" class="form-control" required>
-                            <option value="pending" {% if artist_items.0.artist_fulfillment_status == 'pending' %}selected{% endif %}>
-                                Pending
-                            </option>
-                            <option value="preparing" {% if artist_items.0.artist_fulfillment_status == 'preparing' %}selected{% endif %}>
-                                Preparing
-                            </option>
-                            <option value="shipped" {% if artist_items.0.artist_fulfillment_status == 'shipped' %}selected{% endif %}>
-                                Shipped
-                            </option>
-                            <option value="delivered" {% if artist_items.0.artist_fulfillment_status == 'delivered' %}selected{% endif %}>
-                                Delivered
-                            </option>
-                        </select>
+                        <label for="{{ status_form.status.id_for_label }}">Update Your Fulfillment Status</label>
+                        {{ status_form.status }}{{ status_form.status.errors }}
                     </div>
-
                     <div class="form-group">
-                        <label for="tracking_number">Tracking Number (Optional)</label>
-                        <input type="text" name="tracking_number" id="tracking_number" 
-                               class="form-control" value="{{ order.tracking_number }}"
-                               placeholder="Enter tracking number">
+                        <label for="{{ status_form.tracking_number.id_for_label }}">Your Tracking Number (Optional)</label>
+                        {{ status_form.tracking_number }}{{ status_form.tracking_number.errors }}
                     </div>
-
                     <div class="form-group">
-                        <label for="shipping_carrier">Shipping Carrier</label>
-                        <select name="shipping_carrier" id="shipping_carrier" class="form-control">
-                            <option value="">Select carrier</option>
-                            <option value="usps" {% if order.shipping_carrier == 'usps' %}selected{% endif %}>USPS</option>
-                            <option value="ups" {% if order.shipping_carrier == 'ups' %}selected{% endif %}>UPS</option>
-                            <option value="fedex" {% if order.shipping_carrier == 'fedex' %}selected{% endif %}>FedEx</option>
-                            <option value="dhl" {% if order.shipping_carrier == 'dhl' %}selected{% endif %}>DHL</option>
-                            <option value="other" {% if order.shipping_carrier == 'other' %}selected{% endif %}>Other</option>
-                        </select>
+                        <label for="{{ status_form.shipping_carrier.id_for_label }}">Your Shipping Carrier (Optional)</label>
+                        {{ status_form.shipping_carrier }}{{ status_form.shipping_carrier.errors }}
                     </div>
-
                     <div class="form-group">
-                        <label for="artist_notes">Private Notes (Customer won't see these)</label>
-                        <textarea name="artist_notes" id="artist_notes" class="form-control" 
-                                  rows="3" placeholder="Add private notes about this order...">{{ order.artist_notes }}</textarea>
+                        <label for="{{ status_form.artist_notes.id_for_label }}">Private Notes (Not shared with the buyer or other artists)</label>
+                        {{ status_form.artist_notes }}{{ status_form.artist_notes.errors }}
                     </div>
 
                     <button type="submit" class="btn btn-primary">Update Status</button>
                 </form>
+                    {% else %}
+                    <p>Fulfillment is unavailable until payment is confirmed, or while the order is cancelled or being cancelled.</p>
+                    {% endif %}
             </div>
         </div>
     </div>
 </div>
 
 <script>
-function copyTrackingNumber() {
-    const trackingNumber = document.getElementById('tracking-number').textContent;
+function copyTrackingNumber(btn) {
+    const trackingElement = document.getElementById('tracking-number');
+    if (!trackingElement) return;
+    const trackingNumber = trackingElement.textContent;
     navigator.clipboard.writeText(trackingNumber).then(function() {
         // Show temporary success message
-        const btn = event.target;
         const originalText = btn.textContent;
         btn.textContent = '✓ Copied!';
         setTimeout(() => {

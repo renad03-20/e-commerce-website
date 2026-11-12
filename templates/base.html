@@ -22,65 +22,13 @@
     </head>
 
     {% block extra_css %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/site_header.css' %}">
 
     <title>{% block title %}Art Gallery{% endblock %}</title>
 </head>
 <body>
     {% block navigation %}
-        <!-- Default nav for other pages -->
-        <div class="intro1">
-            <div class="header-container">
-                <nav>
-                    <a href="{% url 'home' %}">
-                        <img src="{% static 'img/artsyLogo.png' %}" class="logo" alt="Art Gallery Logo">
-                    </a>
-                    <ul>
-                        <li><a href="{% url 'home' %}">Home</a></li>
-                        <li><a href="{% url 'artwork_list' %}">Gallery</a></li>
-                        <!-- <li><a href="#">Contact Us</a></li> -->
-                        
-                        {% if user.is_authenticated %}
-                            <!-- User is logged in -->
-                            <!-- <li>
-                                <a href="#">
-                                    <i class="fa-solid fa-user"></i> {{ user.username }}
-                                </a>
-                            </li> -->
-                            <li>
-                                <a href="{% url 'cart:cart_detail' %}">
-                                    <i class="fa-solid fa-cart-shopping"></i>
-                                    {% if cart_total_quantity and cart_total_quantity > 0 %}
-                                        <span class="cart-count">{{ cart_total_quantity }}</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{% url 'accounts:profile' %}">
-                                    <i class="fa-solid fa-user"></i> My Account
-                                </a>
-                            </li>
-                            {% if is_artist %}
-                                <li><a href="{% url 'artwork_create' %}">Add Artwork</a></li>
-                                <li><a href="{% url 'artist_dashboard' %}">My Dashboard</a></li>
-                            {% endif %}
-                            <li><a href="{% url 'logout' %}">Logout</a></li>
-                        {% else %}
-                            <!-- User is not logged in -->
-                            <li><a href="{% url 'login' %}"><i class="fa-solid fa-user"></i> Login</a></li>
-                            <li><a href="{% url 'signup' %}">Sign Up</a></li>
-                            <li>
-                                <a href="{% url 'cart:cart_detail' %}">
-                                    <i class="fa-solid fa-cart-shopping"></i>
-                                    {% if cart_total_quantity and cart_total_quantity > 0 %}
-                                        <span class="cart-count">{{ cart_total_quantity }}</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            </div>
-        </div>
+        {% include 'includes/site_header.html' %}
     {% endblock %}
 
     <!-- Messages display -->
@@ -106,14 +54,13 @@
                 <a href="{% url 'terms_of_service' %}">Terms of Service</a>
                 <a href="{% url 'privacy_policy' %}">Privacy Policy</a>
                 <a href="{% url 'contact' %}">Contact Us</a>
-                <a href="#">About</a>
-                <a href="#">Blog</a>
             </div>
             <p class="copyright">&copy; {% now "Y" %} Art Gallery. All rights reserved.</p>
         </div>
     </div>
 </footer>
 
+    <script src="{% static 'js/site_navigation.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
