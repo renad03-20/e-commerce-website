@@ -1,3 +1,4 @@
+from .forms import CustomUserCreationForm, ContactForm
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
@@ -63,13 +64,9 @@ def privacy_policy(request):
     return render(request, 'pages/privacy_policy.html')
 
 def contact(request):
-    """Contact/Support page"""
-    if request.method == 'POST':
-        # In a real implementation, you would:
-        # 1. Validate the form
-        # 2. Send an email
-        # 3. Store in database
-        # For now, we'll just show a success message
-        messages.success(request, 'Thank you for your message! We will get back to you within 24-48 hours.')
+    form = ContactForm(request.POST if request.method == 'POST' else None)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Your message has been received. Our support team can now review it.')
         return redirect('contact')
-    return render(request, 'pages/contact.html')
+    return render(request, 'pages/contact.html', {'form': form})

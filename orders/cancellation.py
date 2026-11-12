@@ -62,7 +62,11 @@ def require_fulfillable(purchase):
 
 
 def _stripe(call, *args, **kwargs):
-    return call(*args, api_key=settings.STRIPE_SECRET_KEY, **kwargs)
+    result = call(*args, api_key=settings.STRIPE_SECRET_KEY, **kwargs)
+    # Preserve Stripe's lazy pagination rather than flattening a list response.
+    if isinstance(result, stripe.ListObject):
+        return result
+    return _record(result)
 
 
 def _session_list(purchase):
@@ -74,7 +78,8 @@ def _session_list(purchase):
         stripe.checkout.Session.list,
         created={'gte': int(created.timestamp())}, limit=100,
     )
-    return [s for s in sessions.auto_paging_iter() if s.get('client_reference_id') == reference(purchase)]
+    return [s for raw in sessions.auto_paging_iter()
+            if (s := _record(raw)).get('client_reference_id') == reference(purchase)]
 
 
 def checkout(purchase, session_data):
@@ -83,6 +88,9 @@ def checkout(purchase, session_data):
         raise PurchaseError('This order is cancelled or cancellation is in progress.')
     if is_paid(purchase):
         raise PurchaseError('This order has already been paid.')
+    total = purchase.price if is_commission(purchase) else purchase.get_grand_total()
+    if total is None or not 50 <= int(total * 100) <= 99999999:
+        raise PurchaseError('The payment total must be between USD 0.50 and USD 999,999.99. Please contact the artist.')
     previous_id = purchase.stripe_checkout_session_id
     if previous_id:
         previous = _stripe(stripe.checkout.Session.retrieve, previous_id)
@@ -110,13 +118,13 @@ def _refund(purchase, payment_intent):
         # Recover an earlier successful API call even after Stripe's 24h
         # idempotency retention or a DB/process failure after the API response.
         refunds = _stripe(stripe.Refund.list, payment_intent=payment_intent, limit=100)
-        refund = next((r for r in refunds.auto_paging_iter()
-                       if r.get('metadata', {}).get('cancellation_reference') == reference(purchase)), None)
+        refund = next((r for raw in refunds.auto_paging_iter()
+                       if (r := _record(raw)).get('metadata', {}).get('cancellation_reference') == reference(purchase)), None)
         if refund is None:
             refund = _stripe(
                 stripe.Refund.create,
                 payment_intent=payment_intent,
-                reason='requested_by_customer',
+                **({} if getattr(purchase, 'inventory_unavailable_at', None) else {'reason': 'requested_by_customer'}),
                 metadata={'cancellation_reference': reference(purchase)},
                 idempotency_key=f'cancel:{reference(purchase)}:{payment_intent}',
             )
@@ -198,7 +206,7 @@ def cancel_purchase(model, pk, user, cancel_reason=''):
                 purchase.canceled_at = now
             else:
                 # Only webhook-confirmed payments deducted inventory.
-                if purchase.paid:
+                if purchase.paid and not purchase.inventory_unavailable_at:
                     for item in purchase.items.order_by('artwork_id', 'pk'):
                         Artwork.objects.filter(pk=item.artwork_id).update(stock=F('stock') + item.quantity)
                 purchase.status = 'cancelled'
@@ -208,7 +216,9 @@ def cancel_purchase(model, pk, user, cancel_reason=''):
 
 
 def confirm_payment(model, pk, session):
-    """Idempotent webhook transition; cancelled purchases never resume work."""
+    """Idempotent payment transition; an unavailable paid order is refunded."""
+    session = _record(session)
+    unavailable = False
     with transaction.atomic():
         purchase = model.objects.select_for_update().get(pk=pk)
         if session.get('payment_status') != 'paid':
@@ -223,11 +233,14 @@ def confirm_payment(model, pk, session):
             raise PurchaseError('Missing payment reference.')
         if closed(purchase):
             _refund(purchase, intent)
-            # No stock decrement or fulfillment change for a late payment.
+            if not is_commission(purchase) and purchase.inventory_unavailable_at:
+                purchase.status = 'cancelled'
+                purchase.cancelled_at = purchase.cancelled_at or timezone.now()
+                purchase.save(update_fields=['status', 'cancelled_at'])
             return
         if is_paid(purchase):
             if purchase.stripe_payment_intent_id and purchase.stripe_payment_intent_id != intent:
-                _refund(purchase, intent)  # An older, second checkout was also paid.
+                _refund(purchase, intent)
             return
         purchase.stripe_payment_intent_id = intent
         if is_commission(purchase):
@@ -239,15 +252,39 @@ def confirm_payment(model, pk, session):
                 note='Payment confirmed. Waiting for the artist to start work.',
             )
         else:
-            for item in purchase.items.order_by('artwork_id', 'pk'):
-                if not Artwork.objects.filter(pk=item.artwork_id, stock__gte=item.quantity).update(stock=F('stock') - item.quantity):
-                    raise PurchaseError('Insufficient stock for this payment; manual review required.')
+            try:
+                # A savepoint rolls back every decrement if any line sold out.
+                with transaction.atomic():
+                    items = list(purchase.items.order_by('artwork_id', 'pk'))
+                    if not items:
+                        raise StockUnavailable('This order has no available artwork.')
+                    for item in items:
+                        if item.quantity < 1 or not Artwork.objects.filter(
+                            pk=item.artwork_id, stock__gte=item.quantity,
+                        ).update(stock=F('stock') - item.quantity):
+                            raise StockUnavailable('Artwork sold out before payment completed.')
+            except StockUnavailable:
+                # Commit the freeze BEFORE contacting Stripe. A lost refund
+                # response must never allow a later retry to fulfill this order.
+                purchase.inventory_unavailable_at = timezone.now()
+                purchase.cancellation_requested_at = purchase.inventory_unavailable_at
+                unavailable = True
             purchase.paid = True
-            purchase.status = 'processing'
+            purchase.status = 'pending' if unavailable else 'processing'
         purchase.save()
-        if not is_commission(purchase):
+        if not is_commission(purchase) and not unavailable:
+            from .cart_cleanup import consume_purchased_cart_items
             from .purchase_notifications import queue_purchase_emails
+            consume_purchased_cart_items(purchase)
             queue_purchase_emails(purchase)
+
+    if unavailable:
+        with transaction.atomic():
+            purchase = model.objects.select_for_update().get(pk=pk)
+            _refund(purchase, intent)
+            purchase.status = 'cancelled'
+            purchase.cancelled_at = purchase.cancelled_at or timezone.now()
+            purchase.save(update_fields=['status', 'cancelled_at'])
 
 
 def update_refund(refund):
@@ -274,3 +311,26 @@ def update_refund(refund):
                     ledger[intent] = {'id': refund.get('id'), 'status': refund.get('status')}
                     purchase.cancellation_refunds = ledger
                     purchase.save(update_fields=['cancellation_refunds'])
+
+
+class StockUnavailable(PurchaseError):
+    pass
+
+
+class StripeRecord(dict):
+    """Keep dictionary reads and attribute reads compatible across Stripe SDKs."""
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError as exc:
+            raise AttributeError(name) from exc
+
+
+def _record(value):
+    if not isinstance(value, (dict, list)) and hasattr(value, 'to_dict'):
+        value = value.to_dict()
+    if isinstance(value, dict):
+        return StripeRecord({key: _record(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return [_record(item) for item in value]
+    return value

@@ -28,6 +28,12 @@ class ArtworkForm(forms.ModelForm):
         self.fields['category'].queryset = Category.objects.all()
         self.fields['tags'].queryset = Tag.objects.all()
 
+    def clean_price(self):
+        price = self.cleaned_data['price']
+        if price <= 0:
+            raise ValidationError('Enter an artwork price greater than zero.')
+        return price
+
 
 class CommissionRequestForm(forms.ModelForm):
     class Meta:
@@ -78,9 +84,11 @@ class CommissionAcceptForm(forms.Form):
     price = forms.DecimalField(
     max_digits=10,
     decimal_places=2,
-    min_value=Decimal('0.01'),
+    min_value=Decimal('0.50'),
+    max_value=Decimal('999999.99'),
     error_messages={
-        'min_value': 'The commission price must be greater than zero.',
+        'min_value': 'The commission price must be at least USD 0.50 for payment.',
+        'max_value': 'The commission price cannot exceed USD 999,999.99.',
     },
         )
     artist_deadline = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
@@ -90,6 +98,13 @@ class CommissionAcceptForm(forms.Form):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+        self.fields['artist_deadline'].widget.attrs['min'] = timezone.localdate().isoformat()
+
+    def clean_artist_deadline(self):
+        deadline = self.cleaned_data.get('artist_deadline')
+        if deadline is not None and deadline < timezone.localdate():
+            raise ValidationError('Choose today or a later date for your deadline.')
+        return deadline
 
 
 class CommissionDeclineForm(forms.Form):

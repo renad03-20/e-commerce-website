@@ -39,7 +39,6 @@ from django.conf import settings
 def is_artist(user):
     return is_artist_account(user)
 
-@login_required
 def artwork_list(request):
     artworks = Artwork.objects.filter(stock__gt=0)
     categories = Category.objects.all()
@@ -123,35 +122,20 @@ def artwork_update(request, pk):
 @user_passes_test(is_artist)
 def artwork_delete(request, pk):
     artwork = get_object_or_404(Artwork, pk=pk)
-    
-    # Check if the user is the artist who created this artwork
     if artwork.artist != request.user and not request.user.is_superuser:
         messages.error(request, 'You can only delete your own artwork.')
         return redirect('artwork_list')
-    
     if request.method == 'POST':
+        from django.db.models.deletion import ProtectedError
         try:
-            #! First, remove any cart items that reference this artwork
-            try:
-                from cart.models import CartItem
-                CartItem.objects.filter(artwork=artwork).delete()
-            except Exception as e:
-                #! If cart items can't be deleted due to migration issues, continue anyway
-                print(f"Warning: Could not delete cart items: {e}")
-            
-            #! Delete the artwork
-            artwork.delete()
-            messages.success(request, 'Artwork deleted successfully!')
-            return redirect('artwork_list')
-            
-        except Exception as e:
-            messages.error(request, f'Error deleting artwork: {str(e)}')
-            return redirect('artwork_detail', pk=artwork.pk)
-    
-    context = {
-        'artwork': artwork
-    }
-    return render(request, 'products/artwork_delete.html', context)
+            with transaction.atomic():
+                artwork.delete()
+        except ProtectedError:
+            messages.error(request, 'This artwork is linked to an order and cannot be deleted. Set its stock to 0 to stop selling it.')
+            return redirect('artwork_detail', pk=pk)
+        messages.success(request, 'Artwork deleted successfully!')
+        return redirect('artwork_list')
+    return render(request, 'products/artwork_delete.html', {'artwork': artwork})
 
 @login_required
 @user_passes_test(is_artist)

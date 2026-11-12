@@ -32,6 +32,7 @@ class Order(models.Model):
     cancellation_requested_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_refunds = models.JSONField(default=dict, blank=True)
+    inventory_unavailable_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     #! payment information 
     stripe_payment_intent_id = models.CharField(max_length=100, blank=True)
@@ -103,7 +104,8 @@ class Order(models.Model):
     
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    artwork = models.ForeignKey(Artwork, on_delete=models.CASCADE)
+    artwork = models.ForeignKey(Artwork, on_delete=models.PROTECT)
+    cart_item_id_at_checkout = models.PositiveBigIntegerField(null=True, blank=True, editable=False)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField(default=1)
 

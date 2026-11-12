@@ -63,83 +63,44 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 @login_required
+@transaction.atomic
 def order_create(request):
-    #! create the order form the current cart
     cart = get_or_create_cart(request)
-    cart_items = cart.items.all()
-
-    #! check if cart is empty
+    # Cart edits and the checkout snapshot use the same parent lock.
+    from cart.models import Cart
+    Cart.objects.select_for_update().get(pk=cart.pk)
+    cart_items = list(cart.items.select_related('artwork').order_by('pk'))
     if not cart_items:
-        messages.error(request, 'your cart is empty')
+        messages.error(request, 'Your cart is empty.')
         return redirect('cart:cart_detail')
-    
-    #! check for stock
     for item in cart_items:
-        if item.quantity > item.artwork.stock:
-            messages.error(request, f'Sorry only {item.artwork.stock} available for {item.artwork.title}')
+        if item.quantity < 1 or item.quantity > item.artwork.stock or item.artwork.price <= 0:
+            messages.error(request, f'Sorry, {item.artwork.title} is not available in the requested quantity or price. Please update your cart.')
             return redirect('cart:cart_detail')
-        
     if request.method == 'POST':
         form = OrderCreateForm(request.POST)
         if form.is_valid():
-            #! create order but don't save to database yet 
             order = form.save(commit=False)
-            
-            #! Associate order with user if logged in
-            if request.user.is_authenticated:
-                order.user = request.user
-            #! save the order
+            order.user = request.user
             order.save()
-
             for cart_item in cart_items:
-                print(f"DEBUG: Processing cart item: {cart_item.artwork.title} x{cart_item.quantity}") 
                 OrderItem.objects.create(
-                    order=order,
-                    artwork=cart_item.artwork,
-                    price=cart_item.artwork.price,
-                    quantity=cart_item.quantity
+                    order=order, artwork=cart_item.artwork,
+                    price=cart_item.artwork.price, quantity=cart_item.quantity,
+                    cart_item_id_at_checkout=cart_item.pk,
                 )
-
-                print(f'debug: order item created for {cart_item.artwork.title}')
-
-            #!  DO NOT update stock or clear cart here!
-            #! ONLY after successful payment
-            # artwork = cart_item.artwork
-            # print(f'debug before stock update {artwork.title}: stock: {artwork.stock}')
-            # artwork.stock -= cart_item.quantity
-            # artwork.save()
-            # print(f'debug after stock update {artwork.title}: stock: {artwork.stock}')
-
-            #! DO NOT clear cart here!
-            #! ONLY after successful payment:
-            # print(f'debug before clearing cart {cart.items.count()} items')
-            # cart.items.all().delete()
-            # print(f'debug after clearing cart  {cart.items.count()} items')
-
-            #! store order ID in session for payment process
             request.session['order_id'] = order.order_number
-
             messages.success(request, f'Order #{order.order_number} created! Please complete payment.')
             return redirect('payment_process')
-        
     else:
-        #! Pre-fill form with user data if available
-        initial_data = {}
-        if request.user.is_authenticated:
-            initial_data = {
-                'first_name': request.user.first_name,
-                'last_name': request.user.last_name,
-                'email': request.user.email,
-            }
-        form = OrderCreateForm(initial=initial_data)
-
-
-    context = {
-        'form': form,
-        'cart': cart,
-        'cart_items': cart_items
-    }
-    return render(request, 'orders/order_create.html', context)
+        form = OrderCreateForm(initial={
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+            'email': request.user.email,
+        })
+    return render(request, 'orders/order_create.html', {
+        'form': form, 'cart': cart, 'cart_items': cart_items,
+    })
         
 @login_required
 def order_created(request, order_number):
@@ -220,8 +181,8 @@ def payment_process(request):
         return redirect('order_detail', order_number=order.order_number)
 
     if request.method == 'POST':
-        success_url = request.build_absolute_uri(reverse('payment_completed'))
-        cancel_url = request.build_absolute_uri(reverse('payment_canceled'))
+        success_url = request.build_absolute_uri(reverse('payment_completed')) + '?session_id={CHECKOUT_SESSION_ID}'
+        cancel_url = request.build_absolute_uri(reverse('payment_canceled')) + '?order_number=' + order.order_number
         
         # Stripe checkout session data
         session_data = {
@@ -289,12 +250,15 @@ def payment_completed(request):
     """
     Handle successful payment - Focus on UX and Cleanup
     """
-    order_id = request.session.get('order_id')
-    if not order_id:
-        messages.error(request, "No order session found.")
-        return redirect('home')
-    
-    order = get_object_or_404(Order, order_number=order_id)
+    session_id = request.GET.get('session_id')
+    if session_id:
+        order = get_object_or_404(Order, stripe_checkout_session_id=session_id)
+    else:
+        order_id = request.session.get('order_id')
+        if not order_id:
+            messages.error(request, 'No order session found.')
+            return redirect('home')
+        order = get_object_or_404(Order, order_number=order_id)
 
     if order.user_id != request.user.id:
         messages.error(
@@ -314,22 +278,19 @@ def payment_completed(request):
             order_number=order.order_number,
         )
     
-    try:
-        from cart.utils import get_or_create_cart
-        cart = get_or_create_cart(request)
-        cart.items.all().delete() # Clean and simple
-    except Exception as e:
-        print(f"DEBUG: Cart cleanup failed: {e}")
+    # Verified payment consumed the captured cart rows in its transaction.
+    # Returning here must never delete a buyer's later shopping changes.
 
     # Session Cleanup 
-    del request.session['order_id']
+    if request.session.get('order_id') == order.order_number:
+        del request.session['order_id']
     
     messages.success(request, f'Payment completed successfully! Order #{order.order_number} is being processed.')
     return redirect('order_created', order_number=order.order_number)
 
 @login_required
 def payment_canceled(request):
-    order_number = request.session.get('order_id')
+    order_number = request.GET.get('order_number') or request.session.get('order_id')
 
     if not order_number:
         messages.info(request, 'No active checkout was found.')

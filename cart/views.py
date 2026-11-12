@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -48,13 +49,17 @@ def add_to_cart_view(request, artwork_id):
 
     return redirect('cart:cart_detail')
 
+@require_POST
 def remove_from_cart_view(request, item_id):
-    #! remove item from cart
-    if remove_from_cart(request, item_id):
-        messages.success(request, "Item removed from cart.")
-    else:
-        messages.error(request, "Item not found in cart.")
-    
+    with transaction.atomic():
+        cart = get_or_create_cart(request)
+        Cart.objects.select_for_update().get(pk=cart.pk)
+        item = cart.items.filter(pk=item_id).first()
+        if item:
+            item.delete()
+            messages.success(request, 'Item removed from cart.')
+        else:
+            messages.error(request, 'Item not found in cart.')
     return redirect('cart:cart_detail')
 
 def update_cart_view(request, item_id):
@@ -114,4 +119,4 @@ def checkout(request):
         messages.error(request, "Your cart is empty.")
         return redirect('cart:cart_detail')
     
-    return redirect('cart:cart_detail')
+    return redirect('order_create')
